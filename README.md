@@ -5,4 +5,4 @@ The ENTSO-e Energy Rate QuickApp give you the current and coming energy spot pri
 
 This QA has spot prices for the following countries: Austria, Belgium, Bosnia and Herz., Bulgaria, Croatia, Czech Republic, Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Ireland, Italy, Latvia, Lithuania, Luxembourg, Netherlands, North Macedonia, Norway, Poland, Portugal, Romania, Serbia, Slovakia, Slovenia, Spain, Sweden, Switzerland, Ukraine and United Kingdom.
 
-<img src="img/EnergyRate Logo.jpg" width="800" height="400"/>
+<img src="img/EnergyRate Logo.jpg" width="400" height="200"/>
