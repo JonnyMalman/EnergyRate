@@ -68,8 +68,8 @@ function QuickApp:displayEnergyRate()
     end
 
     labelInfo = labelInfo ..self.i18n:get("TariffRatePeriod") ..": " ..string.sub(tariffData.firstRate, 1, 10) .." -- " ..string.sub(tariffData.lastRate, 1, 10) .."\n"
-    labelInfo = labelInfo ..self:getRankIcon(avgMonthRank) .." " ..self.i18n:get("ThisMonthAverage") .. ": " ..tariffData.avgMonthRate .." " ..self.currency .." (" ..string.format("%.0f", tariffData.avgMonthCount/24) .." " ..self.i18n:get("️Days") ..")\n"
-    labelInfo = labelInfo ..self:getRankIcon(avgTotalRank) .." " ..self.i18n:get("TotalTariffAverage") .. ": " ..tariffData.avgTotalRate .." " ..self.currency .." (" ..string.format("%.0f", tariffData.count/24) .." "  ..self.i18n:get("️Days") ..")" .."\n"
+    labelInfo = labelInfo ..self:getRankIcon(avgMonthRank) .." " ..self.i18n:get("ThisMonthAverage") .. ": " ..tariffData.avgMonthRate .." " ..self.currency .." (" ..string.format("%.0f", tariffData.avgMonthCount/24) .." " ..self.i18n:get("Days") ..")\n"
+    labelInfo = labelInfo ..self:getRankIcon(avgTotalRank) .." " ..self.i18n:get("TotalTariffAverage") .. ": " ..tariffData.avgTotalRate .." " ..self.currency .." (" ..string.format("%.0f", tariffData.count/24) .." "  ..self.i18n:get("Days") ..")" .."\n"
 
     labelInfo = labelInfo .."\n"
     labelInfo = labelInfo ..self.i18n:get("EnergyArea") ..": " ..areaName .."\n"
