@@ -25,6 +25,10 @@
             Global variable name change from "EnergyRateMedium" to "EnergyMediumPrice".
             Global variable name change from "EnergyRateLevel" to "EnergyHourLevel".
             Global variable name change from "EnergyRateNextLevel" to "EnergyNextHourLevel".
+
+    v1.2 Customer wishes release 2023-04
+        - Option to add tax to the energy price.
+
 ]]
 
 function QuickApp:onInit()
@@ -34,7 +38,7 @@ function QuickApp:onInit()
     -- Variables for exchangerate.host Api service
     -- https://exchangerate.host
     self.exchangerate_baseURL = "https://api.exchangerate.host/"
-    self.exchangeRate = 0
+    self.exchangeRate = 1 -- Set default excahnge rate to 1:1
 
     -- Variables for ENTSO-e Transparency Platform Api service
     -- https://transparency.entsoe.eu/content/static_content/Static%20content/web%20api/Guide.html
@@ -42,6 +46,7 @@ function QuickApp:onInit()
     self.default_entsoe_token = "f442d0b3-450b-46d7-b752-d8d692fdb2c8" -- See "How to get your own Token:"
     self.default_area_name = "Sweden (SE3)"
     self.default_medium_price = "0.2"  -- 0,2 EUR/kWh
+    self.default_tax_percentage = "0"  -- 0% tax
     self.default_tariff_history = "62" -- Default ~2 month
     self.child_rank_name = "ENTSO-e Next Energy Rate"
     self.next_rank_device_id = nil
@@ -52,6 +57,7 @@ function QuickApp:onInit()
     self.global_var_level_name = "EnergyHourLevel"
     self.global_var_next_level_name = "EnergyNextHourLevel"
     self.global_var_month_level_name = "EnergyMonthLevel"
+    self.global_var_tax_percentage_name = "EnergyTaxPercentage"
 
     self.serviceRequestTime = "--"  -- Last datetime when we request ENTSO-e webservice.
     self.serviceSuccess = true
@@ -93,7 +99,9 @@ function QuickApp:serviceRequestLoop(forceUpdate)
     self:refreshVariables()
 
     -- Get current Exchange rate from Exchangerate.host Api Service
-    self:getServiceExchangeData(QuickApp.setExchangeRate, self)
+    if (self.currency ~= "EUR") then
+        self:getServiceExchangeData(QuickApp.setExchangeRate, self)
+    end
     
     -- Check if table is already up to date, otherwise request service and update table  
     if forceUpdate or not self:IsFibaroTariffUpToDate() then               
