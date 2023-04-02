@@ -9,6 +9,16 @@ function QuickApp:createGlobalVariables()
         }
     api.post('/globalVariables/',medium_var)
     
+    -- Create tax percentage global variable
+    local tax_var = {
+            name=self.global_var_tax_percentage_name,
+            isEnum=false,
+            readOnly=false,
+            value="0", -- 0 %
+            enumValues=nil
+        }
+    api.post('/globalVariables/',tax_var)
+
     -- Create Level rate global variable
     local level_var = {
             name=self.global_var_level_name,
@@ -46,7 +56,13 @@ function QuickApp:setDefaultVariables()
     -- Set local variable medium price rate
     if self.mediumPrice == nil or self.mediumPrice == "" then
         self.mediumPrice = self.default_medium_price
-        self:setVariable(self.default_medium_price_name, self.mediumPrice)
+        self:setGlobalVariable(self.global_var_medium_price_name, self.mediumPrice)
+    end
+
+    -- Set local variable tax
+    if self.tax == nil or self.tax == "" then
+        self.tax = self.default_tax_percentage
+        self:setGlobalVariable(self.global_var_tax_percentage_name, self.tax)
     end
 
     -- Set global variable Energy ENTSO-e Area name
@@ -74,6 +90,7 @@ function QuickApp:refreshVariables()
     self.token = self:getVariable(self.variable_token_name)
     self.tariffHistory = self:getVariable(self.variable_tariff_history_name)
     self.mediumPrice = fibaro.getGlobalVariable(self.global_var_medium_price_name)
+    self.tax = fibaro.getGlobalVariable(self.global_var_tax_percentage_name) / 100
     self.areaName = fibaro.getGlobalVariable(self.global_var_area_name)
     self.areaCode = self:getAreaCode(self.areaName)
     self:updateProperty("unit", self.currency .. "/kWh")
