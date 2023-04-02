@@ -86,6 +86,11 @@ function QuickApp:displayEnergyRate()
         labelInfo = labelInfo ..refresh ..self.i18n:get("ExchangeRate") ..": 1 EUR = " .. exchangeRate .. " " .. self.currency
     end
 
+    if (self.tax > 0) then -- Only show if Tax is set
+        labelInfo = labelInfo .."\n"
+        labelInfo = labelInfo ..refresh ..self.i18n:get("Tax") ..": " ..string.format("%.0f", self.tax * 100) .."%"
+    end
+
     if not (self.i18n.isTranslated) then
         labelInfo = labelInfo .."\n"
         labelInfo = labelInfo .."⚠️ " ..self.i18n:get("MissingTranslation") ..": " ..self.i18n.languageCode
