@@ -25,7 +25,7 @@ function QuickApp:updateFibaroTariffTable(energyRateTable)
         if updateTariff or not (self:existsInFibaroTariffTable(addTariffs, tariffName)) then
             tariff = {
                 name = tariffName,
-                rate = self:getLocalTariffRate(rateData.rate, self.exchangeRate),
+                rate = self:getLocalTariffRate(rateData.rate, self.exchangeRate, self.tax),
                 startTime = self:getRateDate(rateData.rateDate, "%H:%M", 0, self.timezoneOffset),
                 endTime = self:getRateDate(rateData.rateDate, "%H:%M", 1, self.timezoneOffset),
                 days = {string.lower(self:getRateDate(rateData.rateDate, "%A", 0, self.timezoneOffset))}
