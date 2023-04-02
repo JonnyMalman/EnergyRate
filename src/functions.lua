@@ -57,9 +57,9 @@ function QuickApp:xml2PriceTable(xml)
   return priceTable
 end
 
-function QuickApp:getLocalTariffRate(mainRate, exchangeRate)
+function QuickApp:getLocalTariffRate(mainRate, exchangeRate, tax)
     -- Recalculate main rate from EUR/mWh to {local currency}/kWh
-    local rate = tonumber(string.format("%.2f",(tonumber(mainRate)*tonumber(exchangeRate)/1000)))
+    local rate = tonumber(string.format("%.2f",(tonumber(mainRate)*tonumber(exchangeRate)/1000)*tax))
     if rate <= 0 then rate = 0.0001 end -- Fibaro can't accept 0 as tariff rate price :(
     return rate    
 end
