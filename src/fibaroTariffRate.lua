@@ -19,13 +19,16 @@ function QuickApp:updateFibaroTariffTable(energyRateTable)
     end
 
     -- Create Additional Tariff table in kWh/local currency and timezone
+    local totalRate = 0;
     for index, rateData in pairs(energyRateTable) do
         local tariffName = self:getRateDate(rateData.rateDate, "%Y-%m-%d %H:%M", 0, self.timezoneOffset)
+        local calcRate = self:getLocalTariffRate(rateData.rate, self.exchangeRate, self.tax)
+        totalRate = totalRate + calcRate
 
         if updateTariff or not (self:existsInFibaroTariffTable(addTariffs, tariffName)) then
             tariff = {
                 name = tariffName,
-                rate = self:getLocalTariffRate(rateData.rate, self.exchangeRate, self.tax),
+                rate = calcRate,
                 startTime = self:getRateDate(rateData.rateDate, "%H:%M", 0, self.timezoneOffset),
                 endTime = self:getRateDate(rateData.rateDate, "%H:%M", 1, self.timezoneOffset),
                 days = {string.lower(self:getRateDate(rateData.rateDate, "%A", 0, self.timezoneOffset))}
@@ -35,8 +38,11 @@ function QuickApp:updateFibaroTariffTable(energyRateTable)
         end
     end
    
-   -- Update FIBARO Tariff table if need to clean history
-   if (tblCount > maxHoursInTariff) then updateTariff = true end
+    -- Update FIBARO Tariff table if need to clean history
+    if (tblCount > maxHoursInTariff) then updateTariff = true end
+
+    -- If all rates in response table is 0 then do not update FIBARO Tariff table
+    if (totalRate == 0) then updateTariff = false end
 
     -- Update FIBARO tariff rates with new Tariff data
     if updateTariff then       
@@ -64,6 +70,7 @@ function QuickApp:updateFibaroTariffTable(energyRateTable)
             self:d("Set new Tariff rate: " ..rate .." " ..self.currency)
         end    
 
+        -- Save new tariff table to FIBARO
         local response, code = api.put("/energy/billing/tariff", {
             returnRate = tariffData.returnRate,
             additionalTariffs = addTariffs,
