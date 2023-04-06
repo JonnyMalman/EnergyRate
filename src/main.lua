@@ -32,7 +32,7 @@
 ]]
 
 function QuickApp:onInit()
-    self.debugOn = false -- Write to debug console true/false
+    self.debugOn = true -- Write to debug console true/false
     self.httpClient = net.HTTPClient()
     
     -- Variables for exchangerate.host Api service
@@ -48,6 +48,7 @@ function QuickApp:onInit()
     self.default_medium_price = "0.2"  -- 0,2 EUR/kWh
     self.default_tax_percentage = "0"  -- 0% tax
     self.default_tariff_history = "62" -- Default ~2 month
+    self.nextday_releaseTime = 12 -- The UTC time of the day ENTSO-e releses the next day prices
     self.child_rank_name = "ENTSO-e Next Energy Rate"
     self.next_rank_device_id = nil
     self.variable_token_name = "ENTSOE_Token"
@@ -123,7 +124,7 @@ function QuickApp:updateTariffData()
 
     -- Get next 24 hour energy rates if they have been released, normally the next day energy rates are released after 12:00 UTC.
     -- We also need the next day rates to solve the midnight shift between 23:00 and 00:00.
-    if (self.serviceSuccess and tonumber(os.date("!%H", os.time())) >= 12) then
+    if (self.serviceSuccess and tonumber(os.date("!%H", os.time())) >= self.nextday_releaseTime) then
         fibaro.setTimeout(2000, function() 
                                     self:getServiceRateData(QuickApp.updateFibaroTariffTable, self, os.date("!%Y%m%d0000", os.time() + 86400), os.date("!%Y%m%d2300", os.time() + 86400)) 
                                 end)
