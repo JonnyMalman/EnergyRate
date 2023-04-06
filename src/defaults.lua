@@ -90,7 +90,7 @@ function QuickApp:refreshVariables()
     self.token = self:getVariable(self.variable_token_name)
     self.tariffHistory = self:getVariable(self.variable_tariff_history_name)
     self.mediumPrice = fibaro.getGlobalVariable(self.global_var_medium_price_name)
-    self.tax = fibaro.getGlobalVariable(self.global_var_tax_percentage_name) / 100
+    self.tax = (fibaro.getGlobalVariable(self.global_var_tax_percentage_name) / 100) + 1
     self.areaName = fibaro.getGlobalVariable(self.global_var_area_name)
     self.areaCode = self:getAreaCode(self.areaName)
     self:updateProperty("unit", self.currency .. "/kWh")
