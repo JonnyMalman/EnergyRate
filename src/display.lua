@@ -59,8 +59,8 @@ function QuickApp:displayEnergyRate()
     labelInfo = labelInfo ..self:getRankIcon(avgDayRank) .." " ..self.i18n:get("TodayAverage") ..": " .. tariffData.avgDayRate .." " ..self.currency .." - " ..self.i18n:get(avgDayRank) .."\n\n"
 
     if (tariffData.avgNextDayRate == nil) then
-        labelInfo = labelInfo ..self.i18n:get("TomorrowRatesReleases") .." " ..self:getRateReleaseTime(self.timezoneOffset) .."\n"
-        labelInfo = labelInfo .."🕓 " ..self.i18n:get("TomorrowAverage") ..": --\n\n"    
+        labelInfo = labelInfo ..self.i18n:get("TomorrowRatesReleases") .." " ..self:getRateReleaseTime(self.timezoneOffset) .." (UTC: " ..self:getRateReleaseTime(0) ..")\n"
+        labelInfo = labelInfo .."🕓 " ..self.i18n:get("TomorrowAverage") ..": --\n\n"
     else
         local avgNextDayRank = self:getRank(tariffData.avgNextDayRate)
         labelInfo = labelInfo ..self.i18n:get("TomorrowRateRange") ..": " ..tariffData.minNextDayRate .." " ..self.i18n:get("To") .." " ..tariffData.maxNextDayRate .." " ..self.currency .."\n"
