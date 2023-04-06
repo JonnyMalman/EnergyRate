@@ -15,7 +15,7 @@ end
 
 function QuickApp:getRateReleaseTime(timezoneOffset)
     if timezoneOffset == nil then timezoneOffset = 0 end
-    return os.date("%H:%M", os.time({year=2000, month=1, day=1, hour=12, min=0}) + timezoneOffset)
+    return os.date("!%H:%M", os.time({year=2000, month=1, day=1, hour=self.nextday_releaseTime, min=0}) + timezoneOffset)
 end
 
 function QuickApp:tableCount(T)
@@ -37,31 +37,35 @@ function QuickApp:getXmlElement(data, name)
     return data:match("<"..name..">(.-)</"..name..">")
 end
 
+-- Extract ENTSO-e prices from response xml into Lua table
 function QuickApp:xml2PriceTable(xml)
-  local priceTable = {}
-  local ni, c, label, xarg, empty
-  local i, j = 1, 1
+    local priceTable = {}
+    local ni, c, label, xarg, empty
+    local i, j = 1, 1
 
-  while true do
-    ni, j, c, label, xarg, empty = string.find(xml, "<(%/?)([%w:_]+)(.-)(%/?)>", i)
-    if not ni then break end
-    local text = string.sub(xml, i, ni-1)
+    while true do
+        ni, j, c, label, xarg, empty = string.find(xml, "<(%/?)([%w:_]+)(.-)(%/?)>", i)
+        if not ni then break end
+        local text = string.sub(xml, i, ni-1)
    
-    if not string.find(text, "^%s*$") and label == "price" then
+        if not string.find(text, "^%s*$") and label == "price" then
             table.insert(priceTable, text)
+        end
+
+        i = j+1
     end
 
-    i = j+1
-  end
-
-  return priceTable
+    return priceTable
 end
 
 function QuickApp:getLocalTariffRate(mainRate, exchangeRate, tax)
-    -- Recalculate main rate from EUR/mWh to {local currency}/kWh
-    local rate = tonumber(string.format("%.2f",(tonumber(mainRate)*tonumber(exchangeRate)/1000)*tax))
-    if rate <= 0 then rate = 0.0001 end -- Fibaro can't accept 0 as tariff rate price :(
-    return rate    
+    if (tax == nil or tax == 0) then tax = 1 end
+    if (exchangeRate == nil) then exchangeRate = 1 end
+
+    -- Recalculate main rate from EUR/mWh to {local currency}/kWh * tax
+    local rate = tonumber(string.format("%.2f",((tonumber(mainRate)*tonumber(exchangeRate)/1000)*tax)))
+    if rate <= 0 then rate = 0.0001 end -- FIBARO can't accept 0 as tariff rate price :(
+    return rate
 end
 
 function QuickApp:getRank(value)
