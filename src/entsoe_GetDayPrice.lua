@@ -22,11 +22,12 @@ function QuickApp:getServiceRateData(callback, instance, fromdate, todate)
             local periodXml = self:getXmlElement(response.data, "Period")
             local success, data = pcall(function()
                                             return self:xml2PriceTable(periodXml)
-                                        end)
-
+                                        end)                                        
             if success then
                 if data == nil then 
-                    self:debug("ERROR: Response is empty")
+                    self.serviceSuccess = false
+                    self.serviceMessage = "ERROR: Empty response from Url " ..url
+                    self:debug(self.serviceMessage)
                     return nil
                 end
 
@@ -45,17 +46,21 @@ function QuickApp:getServiceRateData(callback, instance, fromdate, todate)
                 end
 
                 self:d("=> Response: Start UTC = " .. startDate .. ", End UTC = " .. endDate .. ", " .. self:tableCount(ratePrices) .. " rates")
-    
+                
+                self.serviceSuccess = true
+                self.serviceMessage = "" 
                 pcall(callback, instance, ratePrices)
             else
                 self.serviceSuccess = false
-                self:debug("Broken xml response from Url: " .. url)
+                self.serviceMessage = "Error: Can't access ENTSO-e or current Token is not valid!"
+                self:debug(self.serviceMessage)
                 return nil
             end
         end,
         error = function(message)
             self.serviceSuccess = false
-            self:debug("Error:", message)
+            self.serviceMessage = "Error: " ..message
+            self:debug(self.serviceMessage)
             return nil
         end
     })
