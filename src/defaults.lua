@@ -36,10 +36,10 @@ function QuickApp:setDefaultVariables()
         self:setVariable(self.variable_token_name, self.token)
     end
 
-    -- Set local variable Days to keep FIBARO Tariff history
-    if self.tariffHistory == nil or self.tariffHistory == "" then
-        self.tariffHistory = self.default_tariff_history
-        self:setVariable(self.variable_tariff_history_name, self.tariffHistory)
+    -- Set local variable medium price rate
+    if self.mediumPrice == nil or self.mediumPrice == "" then
+        self.mediumPrice = self.default_medium_price
+        self:setVariable(self.variable_medium_price_name, self.mediumPrice)
     end
 
     -- Set local rank percent variables
@@ -60,16 +60,16 @@ function QuickApp:setDefaultVariables()
         self:setVariable(self.variable_VeryHigh_name, self.veryhigh_rank) 
     end
 
-    -- Set local variable medium price rate
-    if self.mediumPrice == nil or self.mediumPrice == "" then
-        self.mediumPrice = self.default_medium_price
-        self:setVariable(self.variable_medium_price_name, self.mediumPrice)
-    end
-
     -- Set local variable tax
     if self.tax == nil or self.tax == "" then
         self.tax = self.default_tax_percentage
         self:setVariable(self.variable_tax_percentage_name, self.tax)
+    end
+    
+    -- Set local variable Days to keep FIBARO Tariff history
+    if self.tariffHistory == nil or self.tariffHistory == "" then
+        self.tariffHistory = self.default_tariff_history
+        self:setVariable(self.variable_tariff_history_name, self.tariffHistory)
     end
 
     -- Set global variable Energy ENTSO-e Area name
