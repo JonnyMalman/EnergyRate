@@ -26,7 +26,7 @@ function QuickApp:displayEnergyRate()
     if not self.serviceSuccess then
         lastRqt = "n/a"
         lastUpd = "n/a"
-        areaName = areaName .. "\n⚠️ " ..self.i18n:get("MissingEnergyRatesForSelectedArea")
+        areaName = areaName .. "\n⚠️ " ..self.i18n:get("MissingEnergyRatesForSelectedArea") .."\n" ..self.serviceMessage
     end
 
     -- Only update variables and tariff if we got "real" rate data
@@ -59,7 +59,7 @@ function QuickApp:displayEnergyRate()
     labelInfo = labelInfo ..self:getRankIcon(avgDayRank) .." " ..self.i18n:get("TodayAverage") ..": " .. tariffData.avgDayRate .." " ..self.currency .." - " ..self.i18n:get(avgDayRank) .."\n\n"
 
     if (tariffData.avgNextDayRate == nil) then
-        labelInfo = labelInfo ..self.i18n:get("TomorrowRatesReleases") .." " ..self:getRateReleaseTime(self.timezoneOffset) .." (UTC: " ..self:getRateReleaseTime(0) ..")\n"
+        labelInfo = labelInfo ..self.i18n:get("TomorrowRatesReleases") .." " ..self:getRateReleaseTime(self.timezoneOffset) ..":00 (UTC: " ..self.nextday_releaseTime ..":00)\n"
         labelInfo = labelInfo .."🕓 " ..self.i18n:get("TomorrowAverage") ..": --\n\n"
     else
         local avgNextDayRank = self:getRank(tariffData.avgNextDayRate)
@@ -88,7 +88,7 @@ function QuickApp:displayEnergyRate()
 
     if (self.tax > 0) then -- Only show if Tax is set
         labelInfo = labelInfo .."\n"
-        labelInfo = labelInfo ..refresh ..self.i18n:get("Tax") ..": " ..string.format("%.0f", self.tax * 100) .."%"
+        labelInfo = labelInfo ..refresh ..self.i18n:get("Tax") ..": " ..string.format("%.0f", self.tax) .."%"
     end
 
     if not (self.i18n.isTranslated) then
