@@ -1,3 +1,4 @@
+-- Get default medium price based on local currency
 function QuickApp:getDefaultMediumPrice()
     self.currency = api.get("/settings/info").currency
     if (self.currency == "EUR" or self.currency == "USD" or self.currency == "GBP") then
