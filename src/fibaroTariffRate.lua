@@ -18,7 +18,7 @@ function QuickApp:updateFibaroTariffTable(energyRateTable)
         self:d("Reset FIBARO Tariff rates!")
     end
 
-    -- Create Additional Tariff table in kWh/local currency and timezone
+    -- Create Additional Tariff table in local currency/kWh and local timezone
     local totalRate = 0;
     for index, rateData in pairs(energyRateTable) do
         local tariffName = self:getRateDate(rateData.rateDate, "%Y-%m-%d %H:%M", 0, self.timezoneOffset)
@@ -41,8 +41,11 @@ function QuickApp:updateFibaroTariffTable(energyRateTable)
     -- Update FIBARO Tariff table if need to clean history
     if (tblCount > maxHoursInTariff) then updateTariff = true end
 
-    -- If all rates in response table is 0 then do not update FIBARO Tariff table
-    if (totalRate == 0) then updateTariff = false end
+    -- If all rates in response table is 0 then do not update FIBARO Tariff table, something is wrong!
+    if (totalRate == 0) then
+        updateTariff = false
+        self.serviceSuccess = false -- Something got wrong in ENTSO-e request
+    end
 
     -- Update FIBARO tariff rates with new Tariff data
     if updateTariff then       
@@ -110,8 +113,7 @@ function QuickApp:getFibaroTariffData()
     local first = ""
     local last = ""
 
-    -- TODO: Get AvgDay, AvgTotal, AvgComming, AvgMonth
-    -- For each FIBARO tariff rates
+    -- Sum each FIBARO tariff rate
     if (self:tableCount(tariffData.additionalTariffs) > 0) then
         for index, tariff in pairs(tariffData.additionalTariffs) do
             -- Set first and last name
@@ -213,8 +215,9 @@ function QuickApp:IsFibaroTariffUpToDate()
     end
 
     -- ENTSO-e relese next day energy rate prices after 12:00 UTC each day
-    if (tonumber(os.date("!%H", os.time())) >= 12) then nextDayExists = false end
+    if (tonumber(os.date("%H", os.time())) >= tonumber(self:getRateReleaseTime(self.timezoneOffset))) then nextDayExists = false end
 
+    -- Check FIBARO Tariff if rates already exists
     for _, tariff in pairs(tariffData.additionalTariffs) do
         if (tariff.name == os.date(dateFormat, os.time() - timeShift))    then previousExists = true end
         if (tariff.name == os.date(dateFormat, os.time()))                then currentExist = true end
@@ -231,6 +234,7 @@ function QuickApp:IsFibaroTariffUpToDate()
     return false
 end
 
+-- Check if rate already exists in FIBARO Tariff table
 function QuickApp:existsInFibaroTariffTable(table, match)
     for _, data in pairs(table) do
         if (data.name == match) then return true end
