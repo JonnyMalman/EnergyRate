@@ -26,7 +26,8 @@ function QuickApp:displayEnergyRate()
     if not self.serviceSuccess then
         lastRqt = "n/a"
         lastUpd = "n/a"
-        areaName = areaName .. "\n⚠️ " ..self.i18n:get("MissingEnergyRatesForSelectedArea") .."\n" ..self.serviceMessage
+        areaName = areaName .."\n⚠️ " ..self.i18n:get("MissingEnergyRatesForSelectedArea")
+        if (self.serviceMessage ~= "") then areaName = areaName .."\n⛔ " ..self.serviceMessage .."\n" end
     end
 
     -- Only update variables and tariff if we got "real" rate data
@@ -81,16 +82,19 @@ function QuickApp:displayEnergyRate()
     labelInfo = labelInfo ..self.i18n:get("EnergyRateUpdate") ..": " ..self.serviceRequestTime .."\n"
     labelInfo = labelInfo ..self.i18n:get("VariableUpdate") ..": " ..lastUpd .."\n"
 
-    if (self.currency ~= "EUR") then -- Only show if exchange currency is not in Euro
+    -- Only show if exchange currency is not in Euro
+    if (self.currency ~= "EUR") then
         labelInfo = labelInfo .."\n"
         labelInfo = labelInfo ..refresh ..self.i18n:get("ExchangeRate") ..": 1 EUR = " .. exchangeRate .. " " .. self.currency
     end
 
-    if (self.tax > 0) then -- Only show if Tax is set
+    -- Only show if Tax is set
+    if (self.tax > 0) then
         labelInfo = labelInfo .."\n"
         labelInfo = labelInfo ..refresh ..self.i18n:get("Tax") ..": " ..string.format("%.0f", self.tax) .."%"
     end
 
+    -- If missing translation, just to trigger users to help me with translations ;)
     if not (self.i18n.isTranslated) then
         labelInfo = labelInfo .."\n"
         labelInfo = labelInfo .."⚠️ " ..self.i18n:get("MissingTranslation") ..": " ..self.i18n.languageCode
