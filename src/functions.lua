@@ -3,6 +3,26 @@ function QuickApp:d(msg)
     if self.debugOn then self:debug(msg) end
 end
 
+-- Get default rate price based on local currency
+function QuickApp:getDefaultRatePrice(percentVaiation)
+    self.currency = api.get("/settings/info").currency
+    
+    -- TODO: do an more accurat difference between currencies
+    if (self.currency == "EUR" or self.currency == "USD" or self.currency == "GBP") then
+        return tostring(0.2 * (percentVaiation/100))
+    end
+    
+    return tostring(1 * (percentVaiation/100))
+end
+
+function QuickApp:getCurrencySymbol(currency)
+    if (currency == "EUR") then return "€" end
+    if (currency == "USD") then return "$" end
+    if (currency == "GBP") then return "£" end
+    if (currency == "YEN") then return "¥" end
+    return currency
+end
+
 function QuickApp:getRateDate(dateString, format, addHour, timezoneOffset)
     if format == nil then format = "%Y-%m-%d %H:%M" end
     if addHour == nil then addHour = 0 end
@@ -62,13 +82,17 @@ function QuickApp:xml2PriceTable(xml)
     return priceTable
 end
 
-function QuickApp:getLocalTariffRate(mainRate, exchangeRate, tax)
+function QuickApp:getLocalTariffRate(mainRate, exchangeRate, unit, tax)
     if (exchangeRate == nil) then exchangeRate = 1 end
     if (tax == nil or tax == 0) then tax = 1 end
     if (tax > 1) then tax = (tax / 100) + 1 end -- Convert input tax in % to decimal if > 1
+
+    -- Get Unit scale. ENTSO-e always return prices in €/MWh
+    local unitScale = 1000 -- kWh
+    if (unit == "MWh") then unitScale = 1 end 
     
     -- Recalculate main rate from EUR/mWh to {local currency}/kWh * tax
-    local rate = tonumber(string.format("%.2f",((tonumber(mainRate)*tonumber(exchangeRate)/1000)*tax)))
+    local rate = tonumber(string.format("%.2f",((tonumber(mainRate)*tonumber(exchangeRate)/unitScale)*tax)))
     if rate <= 0 then rate = 0.00001 end -- FIBARO can't accept 0 or negative tariff rate price :(
     return rate
 end
@@ -80,20 +104,18 @@ function QuickApp:getRank(value)
     if (value == "--") then return "" end
     if (value == 0) then return "" end
     
-    local medValue = tonumber(self.mediumPrice)
-    if (medValue == nil) then medValue = self:getDefaultMediumPrice() end
+    local medValue = tonumber(self.medium_Price)
+    if (medValue == nil) then medValue = self:getDefaultRatePrice(100) end
     
-    -- Calculate percent from medium energy rate 
-    local percent = (value / medValue) * 100
-
-    -- Return price rank from calculated percent based on medium price and variable rank value
+    -- Return price rank from variable rank values
     local rank = "VeryLOW"
-    if (percent >= self.low_rank) then rank = "LOW" end
-    if (percent >= self.medium_rank) then rank = "MEDIUM" end
-    if (percent >= self.high_rank) then rank = "HIGH" end
-    if (percent >= self.veryhigh_rank) then rank = "VeryHIGH" end
+    value = tonumber(value)
+    if (value >= self.low_price) then rank = "LOW" end
+    if (value >= self.medium_price) then rank = "MEDIUM" end
+    if (value >= self.high_price) then rank = "HIGH" end
+    if (value >= self.veryhigh_price) then rank = "VeryHIGH" end
 
-    self:d("Set the rank level between percentage of " .. value .. " and " .. medValue .. " = " .. rank .. " (" .. percent .. "%)")
+    self:d("Set the rank level value " .. value .. " from medium value " .. medValue .. " = " .. rank)
 
     return rank
 end
