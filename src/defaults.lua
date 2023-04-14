@@ -1,14 +1,14 @@
--- Get default medium price based on local currency
-function QuickApp:getDefaultMediumPrice()
-    self.currency = api.get("/settings/info").currency
-    if (self.currency == "EUR" or self.currency == "USD" or self.currency == "GBP") then
-        return "0.2"
-    end
-    
-    return "1"
-end
-
 function QuickApp:createGlobalVariables()   
+    -- Create Unit global variable
+    local unit_var = {
+            name=self.global_var_unit_name,
+            isEnum=true,
+            readOnly=true,
+            value="kWh",
+            enumValues={"kWh","MWh"}
+        }
+    api.post('/globalVariables/',unit_var)
+
     -- Create Level rate global variable
     local level_var = {
             name=self.global_var_level_name,
@@ -37,28 +37,22 @@ function QuickApp:setDefaultVariables()
         self:setVariable(self.variable_token_name, self.token)
     end
 
-    -- Set local variable medium price rate
-    if self.mediumPrice == nil or self.mediumPrice == "" then
-        self.mediumPrice = self.default_medium_price
-        self:setVariable(self.variable_medium_price_name, self.mediumPrice)
+    -- Set local rate price variables
+    if self.low_price == nil or self.low_price == "" then 
+        self.low_price = self.default_Low_price
+        self:setVariable(self.variable_Low_name, self.low_price) 
     end
-
-    -- Set local rank percent variables
-    if self.low_rank == nil or self.low_rank == "" then 
-        self.low_rank = self.default_Low_rank
-        self:setVariable(self.variable_Low_name, self.low_rank) 
+    if self.medium_price == nil or self.medium_price == "" then 
+        self.medium_price = self.default_Medium_price
+        self:setVariable(self.variable_Medium_name, self.medium_price) 
     end
-    if self.medium_rank == nil or self.medium_rank == "" then 
-        self.medium_rank = self.default_Medium_rank
-        self:setVariable(self.variable_Medium_name, self.medium_rank) 
+    if self.high_price == nil or self.high_price == "" then 
+        self.high_price = self.default_High_price
+        self:setVariable(self.variable_High_name, self.high_price) 
     end
-    if self.high_rank == nil or self.high_rank == "" then 
-        self.high_rank = self.default_High_rank
-        self:setVariable(self.variable_High_name, self.high_rank) 
-    end
-    if self.veryhigh_rank == nil or self.veryhigh_rank == "" then 
-        self.veryhigh_rank = self.default_VeryHigh_rank
-        self:setVariable(self.variable_VeryHigh_name, self.veryhigh_rank) 
+    if self.veryhigh_price == nil or self.veryhigh_price == "" then 
+        self.veryhigh_price = self.default_VeryHigh_price
+        self:setVariable(self.variable_VeryHigh_name, self.veryhigh_price) 
     end
 
     -- Set local variable tax
@@ -80,7 +74,7 @@ function QuickApp:setDefaultVariables()
     if self.areaCode == nil or self.areaCode == "" then
         fibaro.setGlobalVariable(self.global_var_area_name, self.areaName)
     end
-    
+
     self:refreshVariables()
 end
 
@@ -97,14 +91,14 @@ function QuickApp:refreshVariables()
     -- Refresh variable values
     self.token = self:getVariable(self.variable_token_name)
     self.tariffHistory = tonumber(self:getVariable(self.variable_tariff_history_name))
-    self.low_rank = tonumber(self:getVariable(self.variable_Low_name))
-    self.medium_rank = tonumber(self:getVariable(self.variable_Medium_name))
-    self.high_rank = tonumber(self:getVariable(self.variable_High_name))
-    self.veryhigh_rank = tonumber(self:getVariable(self.variable_VeryHigh_name))
-    self.mediumPrice = tonumber(self:getVariable(self.variable_medium_price_name))
-    self.areaName = fibaro.getGlobalVariable(self.global_var_area_name)
+    self.low_price = tonumber(self:getVariable(self.variable_Low_name))
+    self.medium_price = tonumber(self:getVariable(self.variable_Medium_name))
+    self.high_price = tonumber(self:getVariable(self.variable_High_name))
+    self.veryhigh_price = tonumber(self:getVariable(self.variable_VeryHigh_name))
     self.areaCode = self:getAreaCode(self.areaName)
     self.tax = tonumber(self:getVariable(self.variable_tax_percentage_name))
+    self.areaName = fibaro.getGlobalVariable(self.global_var_area_name)
+    self.unit = fibaro.getGlobalVariable(self.global_var_unit_name)
 
-    self:updateProperty("unit", self.currency .. "/kWh")
+    self:updateProperty("unit", self.currency .. "/" ..tostring(self.unit))
 end
