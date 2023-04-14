@@ -34,8 +34,9 @@
     v1.3 Customer improvements 2023-04
         - Correct UTC time when request next day energy prices from ENTSO-e.
         - Improved Rank Calculation with option to set your own distribution in QA variables.
-        - Move golbal variable "EnergyMediumPrice" to local variable as as "MediumPrice".
+        - Move golbal variable "EnergyMediumPrice" to local variable as as "PriceMedium".
         - Move golbal variable "EnergyTaxPercentage" to local variable as "EnergyTax".
+        - All the rate levels are now set as local variables.
         - Add translation in Portuguese (Thanks to Leandro C.)
 
 ]]
@@ -53,31 +54,30 @@ function QuickApp:onInit()
     -- https://transparency.entsoe.eu/content/static_content/Static%20content/web%20api/Guide.html
     self.entsoe_baseURL = "https://web-api.tp.entsoe.eu/api"
     self.default_entsoe_token = "f442d0b3-450b-46d7-b752-d8d692fdb2c8" -- See "How to get your own Token:" above.
-    self.default_area_name = "Sweden (SE3)"
-    self.default_medium_price = self:getDefaultMediumPrice() -- Get default medium price based on currency
-    self.default_tax_percentage = "0"  -- 0% energy tax
-    self.default_tariff_history = "62" -- Default ~2 month
-    self.default_Low_rank = "10"       -- 10-59% of medium price
-    self.default_Medium_rank = "60"    -- 60-179% of medium price
-    self.default_High_rank = "180"     -- 180-299% of medium price
-    self.default_VeryHigh_rank = "300" -- Above 300% of medium price
-    self.nextday_releaseTime = 12      -- The UTC time of the day ENTSO-e releses the next day prices
+    self.default_area_name = "Sweden (SE3)"  -- Could not come up with better default then my Area :)
+    self.default_unit = "kWh"                -- kWh or MWh
+    self.default_tax_percentage = "0"        -- Defult 0% energy tax
+    self.default_tariff_history = "62"       -- Default 62 days ~2 month
+    self.default_Low_price = self:getDefaultRatePrice(10)       -- 10% of medium price based on local currency
+    self.default_Medium_price = self:getDefaultRatePrice(100)   -- Actual medium price based on local currency
+    self.default_High_price = self:getDefaultRatePrice(180)     -- 180% of medium price based on local currency
+    self.default_VeryHigh_price = self:getDefaultRatePrice(300) -- 300% of medium price based on local currency
+    self.nextday_releaseTime = 12      -- The UTC time of the day when ENTSO-e usually releses the next day prices
     self.child_rank_name = "ENTSO-e Next Energy Rate"
     self.next_rank_device_id = nil
     self.variable_token_name = "ENTSOE_Token"
     self.variable_tariff_history_name = "TariffHistory"
-    self.variable_Low_name = "RankLow"
-    self.variable_Medium_name = "RankMedium"
-    self.variable_High_name = "RankHigh"
-    self.variable_VeryHigh_name = "RankVeryHigh"
-    self.variable_medium_price_name = "MediumPrice"
+    self.variable_Low_name = "PriceLow"
+    self.variable_Medium_name = "PriceMedium"
+    self.variable_High_name = "PriceHigh"
+    self.variable_VeryHigh_name = "PriceVeryHigh"
     self.variable_tax_percentage_name = "EnergyTax"
+    self.global_var_unit_name = "EnergyUnit"
     self.global_var_area_name = "EnergyArea"    
     self.global_var_level_name = "EnergyHourLevel"
     self.global_var_next_level_name = "EnergyNextHourLevel"
     self.global_var_month_level_name = "EnergyMonthLevel"
     
-
     self.serviceRequestTime = "--"  -- Last datetime when we request ENTSO-e webservice.
     self.serviceSuccess = true
     self.serviceMessage = ""
@@ -120,7 +120,7 @@ function QuickApp:serviceRequestLoop(forceUpdate)
 
     -- Get current Exchange rate from Exchangerate.host Api Service
     local waitTime = 0
-    if (self.currency ~= "EUR") then -- If local currency is Euro we don't need to exchange.
+    if (self.currency ~= "EUR") then -- If local currency already in Euro we don't need to exchange.
         self:getServiceExchangeData(QuickApp.setExchangeRate, self)
         waitTime = 2000
     end
@@ -141,13 +141,13 @@ end
 function QuickApp:updateTariffData()
     -- Get current day energy rates.
     -- ENTSO-e service only returns 24 hour Rates on each request even if we define another "toDate" :(
-    self:getServiceRateData(QuickApp.updateFibaroTariffTable, self, os.date("!%Y%m%d0000"), os.date("!%Y%m%d2300"))
+    self:getServiceRateData(QuickApp.updateFibaroTariffTable, self, os.date("!%Y%m%d0000"), os.date("!%Y%m%d2300"), true)
 
     -- Get next 24 hour energy rates if they have been released, normally the next day energy rates are released after 12:00 UTC.
     -- We also need the next day rates to solve the midnight shift between 23:00 and 00:00.
     if (self.serviceSuccess and tonumber(os.date("%H", os.time())) >= tonumber(self:getRateReleaseTime(self.timezoneOffset))) then
         fibaro.setTimeout(2000, function() 
-                                    self:getServiceRateData(QuickApp.updateFibaroTariffTable, self, os.date("!%Y%m%d0000", os.time() + 86400), os.date("!%Y%m%d2300", os.time() + 86400)) 
+                                    self:getServiceRateData(QuickApp.updateFibaroTariffTable, self, os.date("!%Y%m%d0000", os.time() + 86400), os.date("!%Y%m%d2300", os.time() + 86400), false) 
                                 end)
     end
     
