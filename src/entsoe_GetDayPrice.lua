@@ -1,7 +1,7 @@
 -- https://transparency.entsoe.eu/content/static_content/Static%20content/web%20api/Guide.html#_generation_domain
 -- 4.2.10. Day Ahead Rates [12.1.D]
 
-function QuickApp:getServiceRateData(callback, instance, fromdate, todate)
+function QuickApp:getServiceRateData(callback, instance, fromdate, todate, reportError)
     self:d("Request ENTSO-e for period UTC: " .. fromdate .. " -- " .. todate .. " (AreaCode: " .. self.areaCode .. ")")
 
     local ratePrice = {}
@@ -24,10 +24,12 @@ function QuickApp:getServiceRateData(callback, instance, fromdate, todate)
                                             return self:xml2PriceTable(periodXml)
                                         end)                                        
             if success then
-                if data == nil then 
-                    self.serviceSuccess = false
-                    self.serviceMessage = "ERROR: Empty response from Url " ..url
-                    self:debug(self.serviceMessage)
+                if data == nil then
+                    if (reportError == true) then
+                        self.serviceSuccess = false
+                        self.serviceMessage = "ERROR: Empty response from Url " ..url
+                        self:debug(self.serviceMessage)
+                    end
                     return nil
                 end
 
@@ -51,16 +53,20 @@ function QuickApp:getServiceRateData(callback, instance, fromdate, todate)
                 self.serviceMessage = "" 
                 pcall(callback, instance, ratePrices)
             else
-                self.serviceSuccess = false
-                self.serviceMessage = "Error: Can't access ENTSO-e or current Token is not valid!"
-                self:debug(self.serviceMessage)
+                if (reportError == true) then
+                    self.serviceSuccess = false
+                    self.serviceMessage = "Error: Can't get current prices from ENTSO-e!"
+                    self:debug(self.serviceMessage)
+                end
                 return nil
             end
         end,
         error = function(message)
-            self.serviceSuccess = false
-            self.serviceMessage = "Error: " ..message
-            self:debug(self.serviceMessage)
+            if (reportError == true) then
+                self.serviceSuccess = false
+                self.serviceMessage = "Error: " ..message
+                self:debug(self.serviceMessage)
+            end
             return nil
         end
     })
