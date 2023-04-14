@@ -22,7 +22,7 @@ function QuickApp:updateFibaroTariffTable(energyRateTable)
     local totalRate = 0;
     for index, rateData in pairs(energyRateTable) do
         local tariffName = self:getRateDate(rateData.rateDate, "%Y-%m-%d %H:%M", 0, self.timezoneOffset)
-        local calcRate = self:getLocalTariffRate(rateData.rate, self.exchangeRate, self.tax)
+        local calcRate = self:getLocalTariffRate(rateData.rate, self.exchangeRate, self.unit, self.tax)
         totalRate = totalRate + calcRate
 
         if updateTariff or not (self:existsInFibaroTariffTable(addTariffs, tariffName)) then
@@ -153,7 +153,7 @@ function QuickApp:getFibaroTariffData()
         end
 
         -- Calculate tomorrow average values
-        if (totalNextDayCount > 0) then avgNextDayRate = string.format("%.2f", tonumber(totalNextDayRate / totalNextDayCount)) end
+        if (totalNextDayCount > 0) then avgNextDayRate = string.format("%f", tonumber(totalNextDayRate / totalNextDayCount)) end
 
         -- Update FIBARO tariff rate with current rate if not same
         if (tariffData.rate ~= currentRate) then
@@ -171,19 +171,19 @@ function QuickApp:getFibaroTariffData()
     -- Set return Tariff Data table
     local tariffData = {
         count = totalCount,
-        previousRate = previousRate,
-        currentRate = currentRate,
-        nextRate = nextRate,
+        previousRate = string.format("%.2f", previousRate),
+        currentRate = string.format("%.2f", currentRate),
+        nextRate = string.format("%.2f", nextRate),
         avgTotalRate = string.format("%.2f", tonumber(totalRate / totalCount)),
         avgDayRate = string.format("%.2f", tonumber(totalDayRate / totalDayCount)),
         avgDayCount = totalDayCount,
         avgMonthRate = string.format("%.2f", tonumber(totalMonthRate / totalMonthCount)),
         avgMonthCount = totalMonthCount,
-        minDayRate = minDayRate,
-        maxDayRate = maxDayRate,
+        minDayRate = string.format("%.2f", minDayRate),
+        maxDayRate = string.format("%.2f", maxDayRate),
         avgNextDayRate = avgNextDayRate,
         minNextDayRate = minNextDayRate,
-        maxNextDayRate = maxNextDayRate,        
+        maxNextDayRate = maxNextDayRate,
         firstRate = first,
         lastRate = last
     }
