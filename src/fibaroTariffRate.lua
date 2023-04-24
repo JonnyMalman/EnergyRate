@@ -22,7 +22,7 @@ function QuickApp:updateFibaroTariffTable(energyRateTable)
     local totalRate = 0;
     for index, rateData in pairs(energyRateTable) do
         local tariffName = self:getRateDate(rateData.rateDate, "%Y-%m-%d %H:%M", 0, self.timezoneOffset)
-        local calcRate = self:getLocalTariffRate(rateData.rate, self.exchangeRate, self.unit, self.tax)
+        local calcRate = self:getLocalTariffRate(rateData.rate, self.exchangeRate, self.unit, self.tax, self.operator, self.losses, self.adjustment, self.dealer, self.grid)
         totalRate = totalRate + calcRate
 
         if updateTariff or not (self:existsInFibaroTariffTable(addTariffs, tariffName)) then
