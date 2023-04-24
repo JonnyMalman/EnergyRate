@@ -17,7 +17,7 @@
     v1.1 New feature release 2023-03
         - Keeps Tariff rate history in FIBARO.
         - Show more usefull info in QA panel.
-        - Add new global month avrage level variable "EnergyMonthLevel" for those that pay energy consumtion per month avrage.
+        - Add new global month avrage level variable "EnergyMonthLevel" for those that pay energy consumtion per month average.
         - Add new QA variable "TariffHistory" for how many days to store history in FIBARO tariff rates.
         - Localized panel text for language: EN, DK, NO, SV (if you want to help me with translation, please send me an email at energyrate@jamdata.com)
 
@@ -38,6 +38,9 @@
         - Move golbal variable "EnergyTaxPercentage" to local variable as "EnergyTax".
         - All the rate levels are now set as local variables.
         - Add translation in Portuguese (Thanks to Leandro C.)
+
+    v1.4(BETA)
+        - New variables to cost calculation formula: {[(ENTSO_cost + operator_cost) x losses x adjustment] + dealer + localgrid} x tax
 
 ]]
 
@@ -62,6 +65,11 @@ function QuickApp:onInit()
     self.default_Medium_price = self:getDefaultRatePrice(100)   -- Actual medium price based on local currency
     self.default_High_price = self:getDefaultRatePrice(180)     -- 180% of medium price based on local currency
     self.default_VeryHigh_price = self:getDefaultRatePrice(300) -- 300% of medium price based on local currency
+    self.default_operator_cost = "0"        -- Defult Grid Operator costs (0 €/kWh or 0 €/MWh)
+    self.default_grid_losses = "0"          -- Defult Grid Losses (0 %)
+    self.default_adjustment = "0"           -- Defult adjustment added to the Grid Losses (0 %)
+    self.default_dealer_cost = "0"          -- Dealer cost (0 €/KWh or 0 €/MWh)
+    self.default_grid_cost = "0"            -- Defult Local Grid cost (0 €/KWh or 0 €/MWh)
     self.nextday_releaseTime = 12      -- The UTC time of the day when ENTSO-e usually releses the next day prices
     self.child_rank_name = "ENTSO-e Next Energy Rate"
     self.next_rank_device_id = nil
@@ -72,6 +80,11 @@ function QuickApp:onInit()
     self.variable_High_name = "PriceHigh"
     self.variable_VeryHigh_name = "PriceVeryHigh"
     self.variable_tax_percentage_name = "EnergyTax"
+    self.variable_operator_cost_name = "Deviations"             -- Grid Operator costs (€/kWh or €/MWh)
+    self.variable_grid_losses_name = "GridLosses"               -- Grid Losses (%)
+    self.variable_adjustment_name = "Adjustment"                -- Adjustment added to the Grid Losses (%)
+    self.variable_dealer_cost_name = "DealerFee"                -- Dealer cost (€/KWh or €/MWh)
+    self.variable_grid_cost_name = "LocalGridTax"               -- Local Grid cost (€/KWh or €/MWh)
     self.global_var_unit_name = "EnergyUnit"
     self.global_var_area_name = "EnergyArea"    
     self.global_var_level_name = "EnergyHourLevel"
