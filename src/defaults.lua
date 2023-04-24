@@ -61,6 +61,36 @@ function QuickApp:setDefaultVariables()
         self:setVariable(self.variable_tax_percentage_name, self.tax)
     end
     
+     -- Set local variable operator
+    if self.operator == nil or self.operator == "" then
+        self.operator = self.default_operator_cost
+        self:setVariable(self.variable_operator_cost_name, self.operator)
+    end
+
+-- Set local variable losses
+    if self.losses == nil or self.losses == "" then
+        self.losses = self.default_grid_losses
+        self:setVariable(self.variable_grid_losses_name, self.losses)
+    end
+
+-- Set local variable adjustment
+    if self.adjustment == nil or self.adjustment == "" then
+        self.adjustment = self.default_adjustment
+        self:setVariable(self.variable_adjustment_name, self.adjustment)
+    end
+
+-- Set local variable dealer
+    if self.dealer == nil or self.dealer == "" then
+        self.dealer = self.default_dealer_cost
+        self:setVariable(self.variable_dealer_cost_name, self.dealer)
+    end
+
+-- Set local variable grid
+    if self.grid == nil or self.grid == "" then
+        self.grid = self.default_grid_cost
+        self:setVariable(self.variable_grid_cost_name, self.grid)
+    end
+    
     -- Set local variable Days to keep FIBARO Tariff history
     if self.tariffHistory == nil or self.tariffHistory == "" then
         self.tariffHistory = self.default_tariff_history
@@ -97,6 +127,11 @@ function QuickApp:refreshVariables()
     self.veryhigh_price = tonumber(self:getVariable(self.variable_VeryHigh_name))
     self.areaCode = self:getAreaCode(self.areaName)
     self.tax = tonumber(self:getVariable(self.variable_tax_percentage_name))
+    self.operator = tonumber(self:getVariable(self.variable_operator_cost_name))
+    self.losses = tonumber(self:getVariable(self.variable_grid_losses_name))
+    self.adjustment = tonumber(self:getVariable(self.variable_adjustment_name))
+    self.dealer = tonumber(self:getVariable(self.variable_dealer_cost_name))
+    self.grid = tonumber(self:getVariable(self.variable_grid_cost_name))
     self.areaName = fibaro.getGlobalVariable(self.global_var_area_name)
     self.unit = fibaro.getGlobalVariable(self.global_var_unit_name)
 
