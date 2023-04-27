@@ -82,17 +82,24 @@ function QuickApp:xml2PriceTable(xml)
     return priceTable
 end
 
-function QuickApp:getLocalTariffRate(mainRate, exchangeRate, unit, tax)
+function QuickApp:getLocalTariffRate(mainRate, exchangeRate, unit, tax, operator, losses, adjustment, dealer, grid)
     if (exchangeRate == nil) then exchangeRate = 1 end
     if (tax == nil or tax == 0) then tax = 1 end
     if (tax > 1) then tax = (tax / 100) + 1 end -- Convert input tax in % to decimal if > 1
-
+    if (operator == nil) then operator = 0 end
+    if (losses == nil or losses == 0) then losses = 1 end
+    if (losses > 1) then losses = (losses / 100) + 1 end -- Convert input losses in % to decimal if > 1
+    if (adjustment == nil or adjustment == 0) then adjustment = 1 end
+    if (adjustment > 1) then adjustment = (adjustment / 100) + 1 end -- Convert input adjustment in % to decimal if > 1
+    if (dealer == nil) then dealer = 0 end
+    if (grid == nil) then grid = 0 end
+    
     -- Get Unit scale. ENTSO-e always return prices in €/MWh
     local unitScale = 1000 -- kWh
     if (unit == "MWh") then unitScale = 1 end 
     
     -- Recalculate main rate from EUR/mWh to {local currency}/kWh * tax
-    local rate = tonumber(string.format("%.2f",((tonumber(mainRate)*tonumber(exchangeRate)/unitScale)*tax)))
+    local rate = tonumber(string.format("%.2f",(((((tonumber(mainRate)*tonumber(exchangeRate)/unitScale)+operator)*losses*adjustment)+dealer+grid)*tax)))
     if rate <= 0 then rate = 0.00001 end -- FIBARO can't accept 0 or negative tariff rate price :(
     return rate
 end
