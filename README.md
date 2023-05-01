@@ -52,7 +52,7 @@ You set how many days to store history in FIBARO tariff table in the QA variable
 local tariffData = api.get("/energy/billing/tariff")
 local currentRate = tariffData.rate
 local tariffTable = tariffData.additionalTariffs
-....
+...
 
 -- How to get Global QA Tariff state data
 local tariffTable = {}
@@ -61,7 +61,6 @@ local jsonString = fibaro.getGlobalVariable("EnergyStateTable")
 if (jsonString ~= nil and jsonString ~= "") then 
     tariffTable = json.decode(jsonString)
 end
+...
 
 ```
-
-<i>I would love if you give me some feedback on whether or not you like this QA, maybe I missed some function you need, let me know... Or just give your Rating on this QA ;)</i>
