@@ -1,13 +1,34 @@
-function QuickApp:createGlobalVariables()   
-    -- Create Unit global variable
+function QuickApp:createGlobalVariableTable()
+    -- Create Energy state table global variable
+    local table_var = {
+            name=self.global_var_state_table_name,
+            isEnum=false,
+            readOnly=true,
+            value=""
+        }
+    api.post('/globalVariables/', table_var)
+end
+
+function QuickApp:createGlobalVariables()
+    -- Create Energy store in FIBARO Tariff global variable
+    local tariff_var = {
+            name=self.global_var_fibaro_tariff_name,
+            isEnum=true,
+            readOnly=true,
+            value="ON",
+            enumValues={"ON","OFF"}
+        }
+    api.post('/globalVariables/', tariff_var)
+
+    -- Create Energy Unit global variable
     local unit_var = {
             name=self.global_var_unit_name,
             isEnum=true,
             readOnly=true,
-            value="kWh",
+            value=self.default_unit,
             enumValues={"kWh","MWh"}
         }
-    api.post('/globalVariables/',unit_var)
+    api.post('/globalVariables/', unit_var)
 
     -- Create Level rate global variable
     local level_var = {
@@ -17,93 +38,52 @@ function QuickApp:createGlobalVariables()
             value="HIGH",
             enumValues={"VeryLOW","LOW","MEDIUM","HIGH","VeryHIGH"}
         }
-    api.post('/globalVariables/',level_var)
+    api.post('/globalVariables/', level_var)
 
     -- Create Next Level rate global variable
     level_var.name = self.global_var_next_level_name
-    api.post('/globalVariables/',level_var)
+    api.post('/globalVariables/', level_var)
 
     -- Create Month Level rate global variable
     level_var.name = self.global_var_month_level_name
-    api.post('/globalVariables/',level_var)
+    api.post('/globalVariables/', level_var)
+
+    self:d("FIBARO Global variables crated.")
 end
 
-function QuickApp:setDefaultVariables()
+function QuickApp:setLocalVariables()
     -- Not required, but you can register and create your own account and get a token at ENTSO-e.
     -- Register an free ENTSO-e account at: https://transparency.entsoe.eu/
     -- How to get an Token: https://transparency.entsoe.eu/content/static_content/download?path=/Static%20content/API-Token-Management.pdf 
-    if self.token == nil or self.token == "" then      
-        self.token = self.default_entsoe_token
-        self:setVariable(self.variable_token_name, self.token)
-    end
+    self.token = self:getLocalVariable(self.variable_token_name, self.default_token)
 
-    -- Set local rate price variables
-    if self.low_price == nil or self.low_price == "" then 
-        self.low_price = self.default_Low_price
-        self:setVariable(self.variable_Low_name, self.low_price) 
-    end
-    if self.medium_price == nil or self.medium_price == "" then 
-        self.medium_price = self.default_Medium_price
-        self:setVariable(self.variable_Medium_name, self.medium_price) 
-    end
-    if self.high_price == nil or self.high_price == "" then 
-        self.high_price = self.default_High_price
-        self:setVariable(self.variable_High_name, self.high_price) 
-    end
-    if self.veryhigh_price == nil or self.veryhigh_price == "" then 
-        self.veryhigh_price = self.default_VeryHigh_price
-        self:setVariable(self.variable_VeryHigh_name, self.veryhigh_price) 
-    end
+    -- Get/Set local rate price variables
+    self.low_price = self:getLocalVariable(self.variable_Low_name, self.default_Low_price)
+    self.high_price = tonumber(self:getLocalVariable(self.variable_High_name, self.default_High_price))
+    self.veryhigh_price = tonumber(self:getLocalVariable(self.variable_VeryHigh_name, self.default_VeryHigh_price))
 
-    -- Set local variable tax
-    if self.tax == nil or self.tax == "" then
-        self.tax = self.default_tax_percentage
-        self:setVariable(self.variable_tax_percentage_name, self.tax)
-    end
+    -- Get/Set local variable price decimals
+    self.decimals = self:getLocalVariable(self.variable_price_decimals_name, self.default_decimals)
+    -- Get/Set local variable Days to keep FIBARO Tariff history
+    self.tariffHistory = self:getLocalVariable(self.variable_tariff_history_name, self.default_tariff_history)
+    -- Get/Set local variable tax
+    self.tax = self:getLocalVariable(self.variable_tax_percentage_name, self.default_tax)
     
-     -- Set local variable operator
-    if self.operator == nil or self.operator == "" then
-        self.operator = self.default_operator_cost
-        self:setVariable(self.variable_operator_cost_name, self.operator)
-    end
+    -- Get/Set local variable operator cost
+    self.operatorCost = self:getLocalVariable(self.variable_operator_cost_name, self.default_operator_cost)
+    -- Get/Set local variable grid losses in percent
+    self.gridLosses = self:getLocalVariable(self.variable_grid_losses_name, self.default_grid_losses)
+    -- Get/Set local variable grid adjustment in percent
+    self.gridAdjustment = self:getLocalVariable(self.variable_grid_adjustment_name, self.default_grid_adjustment)
+    -- Get/Set local variable dealer cost
+    self.dealerCost = self:getLocalVariable(self.variable_dealer_cost_name, self.default_dealer_cost)
+    -- Get/Set local variable grid cost
+    self.gridCost = self:getLocalVariable(self.variable_grid_cost_name, self.default_grid_cost)
 
--- Set local variable losses
-    if self.losses == nil or self.losses == "" then
-        self.losses = self.default_grid_losses
-        self:setVariable(self.variable_grid_losses_name, self.losses)
-    end
-
--- Set local variable adjustment
-    if self.adjustment == nil or self.adjustment == "" then
-        self.adjustment = self.default_adjustment
-        self:setVariable(self.variable_adjustment_name, self.adjustment)
-    end
-
--- Set local variable dealer
-    if self.dealer == nil or self.dealer == "" then
-        self.dealer = self.default_dealer_cost
-        self:setVariable(self.variable_dealer_cost_name, self.dealer)
-    end
-
--- Set local variable grid
-    if self.grid == nil or self.grid == "" then
-        self.grid = self.default_grid_cost
-        self:setVariable(self.variable_grid_cost_name, self.grid)
-    end
-    
-    -- Set local variable Days to keep FIBARO Tariff history
-    if self.tariffHistory == nil or self.tariffHistory == "" then
-        self.tariffHistory = self.default_tariff_history
-        self:setVariable(self.variable_tariff_history_name, self.tariffHistory)
-    end
-
-    -- Set global variable Energy ENTSO-e Area name
-    if self.areaName == nil or self.areaName == "" then
-        self.areaName = self.default_area_name
-    end
-    if self.areaCode == nil or self.areaCode == "" then
-        fibaro.setGlobalVariable(self.global_var_area_name, self.areaName)
-    end
+    -- Get/Set global FIBARO variables
+    self.areaName = self:getGlobalFibaroVariable(self.global_var_area_name, self.default_area_name)
+    self.areaCode = self:getAreaCode(self.areaName)
+    self.unit = self:getGlobalFibaroVariable(self.global_var_unit_name, self.default_unit)
 
     self:refreshVariables()
 end
@@ -113,27 +93,87 @@ function QuickApp:refreshVariables()
     local fibaroSettings = api.get("/settings/info")
     self.currency = fibaroSettings.currency
     self.timezoneOffset = tonumber(fibaroSettings.timezoneOffset)
-    --self.dateFormat = tonumber(fibaroSettings.dateFormat)
-    --self.timeFormat = tonumber(fibaroSettings.timeFormat)
-    --self.decimalMark = tonumber(fibaroSettings.decimalMark)
+    self.dateFormat = fibaroSettings.dateFormat
     self.i18n = i18n:new(fibaroSettings.defaultLanguage)
-        
-    -- Refresh variable values
+    
+    -- Refrech global variables
+    self.areaName = fibaro.getGlobalVariable(self.global_var_area_name)
+    self.areaCode = self:getAreaCode(self.areaName)
+    self.tariffData = self:getEnergyTariffTable()
+    self.unit = fibaro.getGlobalVariable(self.global_var_unit_name) 
+
+    -- Refresh QA variable values
     self.token = self:getVariable(self.variable_token_name)
     self.tariffHistory = tonumber(self:getVariable(self.variable_tariff_history_name))
     self.low_price = tonumber(self:getVariable(self.variable_Low_name))
-    self.medium_price = tonumber(self:getVariable(self.variable_Medium_name))
     self.high_price = tonumber(self:getVariable(self.variable_High_name))
     self.veryhigh_price = tonumber(self:getVariable(self.variable_VeryHigh_name))
-    self.areaCode = self:getAreaCode(self.areaName)
     self.tax = tonumber(self:getVariable(self.variable_tax_percentage_name))
-    self.operator = tonumber(self:getVariable(self.variable_operator_cost_name))
-    self.losses = tonumber(self:getVariable(self.variable_grid_losses_name))
-    self.adjustment = tonumber(self:getVariable(self.variable_adjustment_name))
-    self.dealer = tonumber(self:getVariable(self.variable_dealer_cost_name))
-    self.grid = tonumber(self:getVariable(self.variable_grid_cost_name))
-    self.areaName = fibaro.getGlobalVariable(self.global_var_area_name)
-    self.unit = fibaro.getGlobalVariable(self.global_var_unit_name)
+    self.decimals = self:getVariable(self.variable_price_decimals_name)
+    self.valueFormat = self:getValueFormat()
 
-    self:updateProperty("unit", self.currency .. "/" ..tostring(self.unit))
+    self.operatorCost = tonumber(self:getVariable(self.variable_operator_cost_name))
+    self.gridLosses = tonumber(self:getVariable(self.variable_grid_losses_name))
+    self.gridAdjustment = tonumber(self:getVariable(self.variable_grid_adjustment_name))
+    self.dealerCost = tonumber(self:getVariable(self.variable_dealer_cost_name))
+    self.gridCost = tonumber(self:getVariable(self.variable_grid_cost_name))
+
+    self:updateProperty("unit", self.currency .. "/" ..self.unit)
+
+    -- Set Energy rates data to display
+    self:displayEnergyRate()
+end
+
+-- Get local QA variable, set to default value if variable is missing
+function QuickApp:getLocalVariable(name, defaultValue)
+    local value = self:getVariable(name)
+
+    if (value == nil or value == "" or value == "nil") then
+        self:setVariable(name, tostring(defaultValue))
+        return defaultValue
+    else
+        return value
+    end
+end
+
+-- Get local QA variable, set to default value if variable is missing
+function QuickApp:getGlobalFibaroVariable(name, defaultValue)
+    local value = fibaro.getGlobalVariable(name)
+
+    if (value == nil or value == "" or value == "nil") then
+        fibaro.setGlobalVariable(name, tostring(defaultValue))
+        return defaultValue
+    else
+        return value
+    end
+end
+
+-- Get default rate price based in local currency
+function QuickApp:getDefaultPriceDecimals()
+    if (self.currency == nil or self.currency == "") then
+        local fibaroSettings = api.get("/settings/info")
+        self.currency = fibaroSettings.currency
+    end
+
+    -- TODO: do an more accurat difference between currencies
+    if (self.currency == "EUR" or self.currency == "USD" or self.currency == "GBP") then
+        return "5"
+    else
+        return "3"
+    end
+end
+
+-- Get default rate price based in local currency
+function QuickApp:getDefaultRatePrice(percent)
+    if (self.currency == nil or self.currency == "") then
+        local fibaroSettings = api.get("/settings/info")
+        self.currency = fibaroSettings.currency
+    end
+
+    -- TODO: do an more accurat difference between currencies
+    if (self.currency == "EUR" or self.currency == "USD" or self.currency == "GBP") then
+        return tostring(0.2 * (percent / 100))
+    else
+        return tostring(1 * (percent / 100))
+    end
 end
