@@ -1,252 +1,56 @@
-function QuickApp:updateFibaroTariffTable(energyRateTable)
-    -- Exit if no data
-    if self:tableCount(energyRateTable) == 0 then return end
-    if self.tariffHistory == nil then self.tariffHistory = 365 end
+-- Update FIBARO Tariff rate table
+function QuickApp:updateFibaroTariffTable()
+    -- Exit if no data in global table or we got Service error
+    if (self:getGlobalFibaroVariable(self.global_var_fibaro_tariff_name, "ON") == "OFF" or self:tableCount(self.tariffData) == 0 or self.serviceSuccess == false) then return end
 
-    -- Get current FIBARO Energy Tariff data
+    -- Get current FIBARO Energy Tariff rate data
     local tariffData = api.get("/energy/billing/tariff")
-    local tariff = {}
-    local addTariffs = tariffData.additionalTariffs
-    local tblCount = self:tableCount(addTariffs)
-    local rate = tariffData.rate
-    local updateTariff = false
-    local maxHoursInTariff = self.tariffHistory * 24
-    
-    -- If reset Tariff rates button have been pressed
-    if (updateTariff) then
-        addTariffs = {}
-        self:d("Reset FIBARO Tariff rates!")
-    end
-
-    -- Create Additional Tariff table in local currency/kWh and local timezone
-    local totalRate = 0;
-    for index, rateData in pairs(energyRateTable) do
-        local tariffName = self:getRateDate(rateData.rateDate, "%Y-%m-%d %H:%M", 0, self.timezoneOffset)
-        local calcRate = self:getLocalTariffRate(rateData.rate, self.exchangeRate, self.unit, self.tax, self.operator, self.losses, self.adjustment, self.dealer, self.grid)
-        totalRate = totalRate + calcRate
-
-        if updateTariff or not (self:existsInFibaroTariffTable(addTariffs, tariffName)) then
-            tariff = {
-                name = tariffName,
-                rate = calcRate,
-                startTime = self:getRateDate(rateData.rateDate, "%H:%M", 0, self.timezoneOffset),
-                endTime = self:getRateDate(rateData.rateDate, "%H:%M", 1, self.timezoneOffset),
-                days = {string.lower(self:getRateDate(rateData.rateDate, "%A", 0, self.timezoneOffset))}
-            }
-            table.insert(addTariffs, tariff)
-            updateTariff = true
-        end
-    end
-   
-    -- Update FIBARO Tariff table if need to clean history
-    if (tblCount > maxHoursInTariff) then updateTariff = true end
-
-    -- If all rates in response table is 0 then do not update FIBARO Tariff table, something is wrong!
-    if (totalRate == 0) then
-        updateTariff = false
-        self.serviceSuccess = false -- Something got wrong in ENTSO-e request
-    end
-
-    -- Update FIBARO tariff rates with new Tariff data
-    if updateTariff then       
-        -- Sort tariff table by name (DateTime)
-        table.sort(addTariffs, function (t1, t2) return t1.name < t2.name end )
-
-        -- Clean old Tartiff rates
-        if (maxHoursInTariff > 0 and maxHoursInTariff < tblCount) then
-            local cleanTariffs = {}
-            local startIndex = tblCount - maxHoursInTariff
-            for index, tariff in pairs(addTariffs) do
-                if index > startIndex then
-                    table.insert(cleanTariffs, tariff)
-                end
-            end
-            addTariffs = cleanTariffs
-            self:d("Tariff table clean from old history: " ..startIndex .." hours")
-        end
-
-        -- Get current rate from FIBARO Tariff rates
-        local currentTariff = self:getFibaroTariff(addTariffs, os.date("%Y-%m-%d %H:00", os.time()))
-        if (currentTariff ~= nil) then
-            if (rate ~= currentTariff.rate) then updateTariff = true end
-            rate = currentTariff.rate
-            self:d("Set new Tariff rate: " ..rate .." " ..self.currency)
-        end    
-
-        -- Save new tariff table to FIBARO
-        local response, code = api.put("/energy/billing/tariff", {
-            returnRate = tariffData.returnRate,
-            additionalTariffs = addTariffs,
-            name = tariffData.name,
-            rate = rate
-        })
-
-        self:d("Update Tariff response " .. tostring(code) .. " - \"" .. tariffData.name .. "\" Rate: " .. tariffData.rate .. " => " .. rate .. " (TimezoneOffset: " .. self.timezoneOffset .. ")")
-    end
-end
-
-function QuickApp:getFibaroTariffData()
-    -- Get current FIBARO Energy Tariff data
-    local tariffData = api.get("/energy/billing/tariff")
-
-    local dateFormat = "%Y-%m-%d %H:00"
-    local dayDate = os.date("%Y-%m-%d")
-    local nextDayDate = os.date("%Y-%m-%d", os.time() + 86400)
-    local monthDate = os.date("%Y-%m")
-    local timeShift = 1 * 60 * 60  -- 1 hours
-    local previousRate = 0
-    local currentRate = 0
-    local nextRate = 0
-    local totalCount = 0
-    local totalRate = 0
-    local totalDayCount = 0
-    local totalDayRate = 0
-    local totalMonthCount = 0
-    local totalMonthRate = 0
-    local minDayRate = 9999
-    local maxDayRate = 0
-    local totalNextDayCount = 0
-    local totalNextDayRate = 0    
-    local minNextDayRate = 9999
-    local maxNextDayRate = 0
-    local avgNextDayRate = nil
-    local first = ""
-    local last = ""
-
-    -- Sum each FIBARO tariff rate
-    if (self:tableCount(tariffData.additionalTariffs) > 0) then
-        for index, tariff in pairs(tariffData.additionalTariffs) do
-            -- Set first and last name
-            if index == 1 then first = tariff.name end
-            last = tariff.name
-
-            -- Set total values
-            totalRate = totalRate + tariff.rate
-            totalCount = totalCount + 1
-
-            -- Set today values
-            if (string.sub(tariff.name, 1, 10) == dayDate) then
-                totalDayRate = totalDayRate + tariff.rate
-                totalDayCount = totalDayCount + 1
-                if tariff.rate < minDayRate then minDayRate = tariff.rate end
-                if tariff.rate > maxDayRate then maxDayRate = tariff.rate end
-            end
-            
-            -- Set current month values
-            if (string.sub(tariff.name, 1, 7) == monthDate) then
-                totalMonthRate = totalMonthRate + tariff.rate
-                totalMonthCount = totalMonthCount + 1
-            end
-
-            -- Set tomorrow values
-            if (string.sub(tariff.name, 1, 10) == nextDayDate) then
-                totalNextDayRate = totalNextDayRate + tariff.rate
-                totalNextDayCount = totalNextDayCount + 1
-                if tariff.rate < minNextDayRate then minNextDayRate = tariff.rate end
-                if tariff.rate > maxNextDayRate then maxNextDayRate = tariff.rate end
-            end
-
-            -- Set previous, current and next rate values
-            if (tariff.name == os.date(dateFormat, os.time() - timeShift))    then previousRate = tariff.rate end
-            if (tariff.name == os.date(dateFormat, os.time()))                then currentRate = tariff.rate end
-            if (tariff.name == os.date(dateFormat, os.time() + timeShift))    then nextRate = tariff.rate end
-        end
-
-        -- Calculate tomorrow average values
-        if (totalNextDayCount > 0) then avgNextDayRate = string.format("%f", tonumber(totalNextDayRate / totalNextDayCount)) end
-
-        -- Update FIBARO tariff rate with current rate if not same
-        if (tariffData.rate ~= currentRate) then
-            local response, code = api.put("/energy/billing/tariff", {
-                returnRate = tariffData.returnRate,
-                additionalTariffs = tariffData.additionalTariffs,
-                name = tariffData.name,
-                rate = currentRate
-            })
-
-            self:d("Update Tariff response " .. tostring(code) .. " - \"" .. tariffData.name .. "\" Rate: " .. tariffData.rate .. " => " .. currentRate)
-        end
-    end
-
-    -- Set return Tariff Data table
-    local tariffData = {
-        count = totalCount,
-        previousRate = string.format("%.2f", previousRate),
-        currentRate = string.format("%.2f", currentRate),
-        nextRate = string.format("%.2f", nextRate),
-        avgTotalRate = string.format("%.2f", tonumber(totalRate / totalCount)),
-        avgDayRate = string.format("%.2f", tonumber(totalDayRate / totalDayCount)),
-        avgDayCount = totalDayCount,
-        avgMonthRate = string.format("%.2f", tonumber(totalMonthRate / totalMonthCount)),
-        avgMonthCount = totalMonthCount,
-        minDayRate = string.format("%.2f", minDayRate),
-        maxDayRate = string.format("%.2f", maxDayRate),
-        avgNextDayRate = avgNextDayRate,
-        minNextDayRate = minNextDayRate,
-        maxNextDayRate = maxNextDayRate,
-        firstRate = first,
-        lastRate = last
-    }
-
-    self:d("TariffData - Count: " ..tariffData.count .." (" ..(self.tariffHistory * 24) .."), Previous Rate: " ..tariffData.previousRate ..", Current Rate: " ..tariffData.currentRate ..", next Rate: " ..tariffData.nextRate ..", Total avrage Rate: " ..tariffData.avgTotalRate)
-
-    return tariffData
-end
-
-function QuickApp:IsFibaroTariffUpToDate()
-    -- Get current FIBARO Energy Tariff data
-    local tariffData = api.get("/energy/billing/tariff")
-
-    if self.tariffHistory == nil then self.tariffHistory = 365 end
-    local maxHoursInTariff = self.tariffHistory * 24
-    local tblCount = self:tableCount(tariffData.additionalTariffs)
-    local dateFormat = "%Y-%m-%d %H:00"
-    local timeShift = 1 * 60 * 60      -- 1 hours
-    local nextDayShift = 24 * 60 * 60  -- 24 hours
-    local keepHistory = false
-    local previousExists = false
-    local currentExist = false
-    local nextExists = false
-    local nextDayExists = true
-
-    if (tblCount > maxHoursInTariff) then 
-        self:d("FIBARO Tariff rate panel need to be cleaned!")
-        return false
-    end
-
-    -- ENTSO-e relese next day energy rate prices after 12:00 UTC each day
-    if (tonumber(os.date("%H", os.time())) >= tonumber(self:getRateReleaseTime(self.timezoneOffset))) then nextDayExists = false end
-
-    -- Check FIBARO Tariff if rates already exists
-    for _, tariff in pairs(tariffData.additionalTariffs) do
-        if (tariff.name == os.date(dateFormat, os.time() - timeShift))    then previousExists = true end
-        if (tariff.name == os.date(dateFormat, os.time()))                then currentExist = true end
-        if (tariff.name == os.date(dateFormat, os.time() + timeShift))    then nextExists = true end
-        if (tariff.name == os.date(dateFormat, os.time() + nextDayShift)) then nextDayExists = true end
+    local currRate = tariffData.rate
+    local addTariffs = {}
+    local currentRateTime = os.date("%y%m%d%H")
+    local count = 0
         
-        if previousExists and currentExist and nextExists and nextDayExists then
-            self:d("FIBARO Tariff rate panel is already up to date")
-            return true
-        end   
+    -- Update FIBARO Additional Tariff table in local currency/kWh and local timezone
+    for index, tariff in pairs(self.tariffData) do
+        local startTime = self:toDate(tariff.id, "%H:%M", 0)
+        local endTime = self:toDate(tariff.id, "%H:%M", 1)
+        local tariffName = self:toDate(tariff.id, self:getDateFormat(), 0) .." (" ..startTime .."-" ..endTime ..")"
+
+        -- FIBARO only display price in kWh
+        local locRate = self:getLocalTariffRate(tariff.rate, self.exchangeRate, "kWh", self.tax, self.operatorCost, self.gridLosses, self.gridAdjustment, self.dealerCost, self.gridCost)
+        
+         -- FIBARO Tariff table can't have negative values :(
+        if (locRate < 0) then
+            tariffName = tariffName .." " ..string.format("%f", locRate) .." ⛔"
+            locRate = 0.00001
+        end
+
+        -- Get current rate
+        if (tariff.id == currentRateTime) then 
+            currRate = locRate
+            tariffName = tariffName .." ⭐"
+            self:d("Current energy price: "..tariff.rate .."=" ..currRate .." at exchange: " ..self.exchangeRate .." Unit: " ..self.unit .." ID: " ..tariff.id .." - " ..tariffName)
+        end
+        
+        -- Add additional tariff to local tariff table
+        local tariff = {
+            name = tariffName,
+            rate = locRate,
+            startTime = startTime,
+            endTime = endTime,
+            days = {string.lower(self:toDate(tariff.id, "%A", 0))}
+        }
+        table.insert(addTariffs, tariff)
+        count = count + 1
     end
 
-    self:d("FIBARO Tariff rate panel need to be updated!")
-    return false
-end
+    -- Save new tariff table to FIBARO Tariff table
+    local response, code = api.put("/energy/billing/tariff", {
+        returnRate = tariffData.returnRate,
+        additionalTariffs = addTariffs,
+        name = tariffData.name,
+        rate = currRate
+    })
 
--- Check if rate already exists in FIBARO Tariff table
-function QuickApp:existsInFibaroTariffTable(table, match)
-    for _, data in pairs(table) do
-        if (data.name == match) then return true end
-    end
-    self:d("Fibaro Tariff " ..match .." not exists!")
-    return false
-end
-
-function QuickApp:getFibaroTariff(rates, match)
-    for _, data in pairs(rates) do
-        if (data.name == match) then return data end
-    end
-    self:d("Fibaro Tariff " ..match .." is missing!")
-    return nil
+    self:d("Update " ..count .." FIBARO Tariffs with response code: " .. tostring(code) .. " - \"" .. tariffData.name .. "\" Rate: " .. tariffData.rate .. " => " .. currRate)
 end
