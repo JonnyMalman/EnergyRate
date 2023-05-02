@@ -14,7 +14,7 @@ function QuickApp:updateFibaroTariffTable()
     for index, tariff in pairs(self.tariffData) do
         local startTime = self:toDate(tariff.id, "%H:%M", 0)
         local endTime = self:toDate(tariff.id, "%H:%M", 1)
-        local tariffName = self:toDate(tariff.id, self:getDateFormat(), 0) .." (" ..startTime .."-" ..endTime ..")"
+        local tariffName = self:toDate(tariff.id, self:getDateFormat(), 0) .." " ..startTime .." (" ..tariff.rate .." €/MWh)"
 
         -- FIBARO only display price in kWh
         local locRate = self:getLocalTariffRate(tariff.rate, self.exchangeRate, "kWh", self.tax, self.operatorCost, self.gridLosses, self.gridAdjustment, self.dealerCost, self.gridCost)
