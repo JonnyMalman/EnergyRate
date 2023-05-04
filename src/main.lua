@@ -33,14 +33,14 @@
 
     v1.3 Customer improvements 2023-05
         - Rewrite energy tariff table to store in global variable instead of FIBARO tariff table to solve negative energy prices.
-        - Correct UTC time when request next day energy prices from ENTSO-e.
+        - Fix UTC time when request next day energy prices from ENTSO-e.
         - Improved energy value display formatting, with price decimal local variable, also show correct price if very low or negative price. (Except FIBARO tariff that can't show negative values)
         - All the rate levels are now set as local variables in real local energy price.
         - Removed the global variable "EnergyMediumPrice", medium price is now set between Low and High prices in QA variables.
         - Move global variable "EnergyTaxPercentage" to local variable as "EnergyTax".
         - Add global variable ON/OFF to store prices in FIBARO Tariff rate table.
         - Add translation in Portuguese (Thanks to Leandro C.).
-        - New variables to cost calculation formula: {[(ENTSO_cost + deviation cost) x losses x adjustment] + dealer + localgrid} x tax (Leandro C.).
+        - New variables to cost calculation formula: {[(ENTSO_cost + operator cost) x losses x adjustment] + dealer + localgrid} x tax (by Leandro C.).
 ]]
 
 function QuickApp:onInit()
@@ -85,7 +85,7 @@ function QuickApp:onInit()
     
     -- Default values to set if missing
     self.default_token = "f442d0b3-450b-46d7-b752-d8d692fdb2c8"         -- See "How to get your own Token:" above.
-    self.default_area_name = "Sweden (SE3)"                             -- Could not come up with better default then my Area :)
+    self.default_area_name = "[SELECT AREA]"                            -- Need to select an area before request ENTSO-e
     self.default_unit = "kWh"                                           -- Show kWh or MWh in display panel (FIBARO Tariff table is always in kWh)
     self.default_tax = "0"                                              -- Default 0% energy tax
     self.default_tariff_history = "62"                                  -- Default 62 days ~2 month
@@ -107,25 +107,29 @@ function QuickApp:onInit()
     self.valueFormat = self:getValueFormat(self.default_decimals)       -- The value formatting of decimals when display Energy prices ie. "%.2f"
     self.serviceRequestTime = "--"                                      -- Last datetime when we request ENTSO-e webservice.
     self.serviceSuccess = true                                          -- Request ENTSO-e service success or fault
+    self.exchangeRateUpdated = true
     self.serviceMessage = ""                                            -- Request ENTSO-e service error message
+    self.serviceLoopTime = 60000                                        -- Servie Loop time, start with each a minute
     
     -- Let´s start
     self:mainStart()
 end
 
 function QuickApp:mainStart()
-    -- Create global varaiables and set default values (See: defaults)
+    -- Create global varaiables (See: defaults)
     self:createAreaVariables()    
     self:createGlobalVariables()
-    self:setLocalVariables()
-            
+
     -- Init Child device to display next hour rate in FIBARO (See: QAChild_NextRank)
     self:initChildDevices({["com.fibaro.multilevelSensor"] = ENTSOE_Next_Rank})
     self:validateChildren()
     
+    -- set default values (See: defaults)
+    self:setLocalVariables()           
+    
     -- Start loop, one for request ENTSO-e service and exchange rate and one for updating global variables and panel display.
     self:d(">>>> Start ENTSO-e Energy Rate <<<<")
-    self:serviceRequestLoop(false) -- Request ExchangeRate and ENTSO-e services
+    self:serviceRequestLoop(true) -- Request ExchangeRate and ENTSO-e services
 end
 
 -- Trigger if panel refresh button pressed
@@ -137,31 +141,25 @@ end
 
 -- ENTSO-e and Exchange rate service loop
 function QuickApp:serviceRequestLoop(forceUpdate)
-    -- Set Update service request loop to every hour
-    local loopTime = (tonumber(os.date("%M"))) * 60 * 1000
-   
-    -- Get current Exchange rate from Exchangerate.host Api Service
-    local waitTime = 0
-    self.exchangeRateUpdated = true
-    if (self.currency ~= "EUR") then -- If local currency already in Euro we don't need exchange rates.
-        self:getServiceExchangeData(QuickApp.setExchangeRate, self)
-        waitTime = 2000
-    end
-
     -- Refresh variables
     self:refreshVariables()
 
     -- Check if table is already up to date, otherwise request service and update table  
-    if forceUpdate or not self:IsEnergyTariffUpToDate() then
-        -- Get Energy Rates from ENSO-e Service (only wait 2 sec for Exchange rate http request to complete if currency not in EUR)
-        fibaro.setTimeout(waitTime, function() self:updateTariffData() end)
+    if (self.areaCode ~= "" and forceUpdate) then
+        self.serviceLoopTime = 60 * 1000 * 60 -- Set Update service request loop to every hour
+        -- (tonumber(os.date("%M"))) * 
+        
+        -- Only get Energy Rates from ENSO-e Service if missing in EnergyStateTable
+        if (not self:IsEnergyTariffUpToDate()) then self:updateTariffData() end
+    else
+        self.serviceLoopTime = 60000
     end
 
     -- Start this Service request loop
-    fibaro.setTimeout(loopTime, function() self:serviceRequestLoop() end)
+    fibaro.setTimeout(self.serviceLoopTime, function() self:serviceRequestLoop(false) end)
 
     -- Update variables and panel
-    self:displayLoop(true) 
+    self:displayLoop(forceUpdate) 
 end
 
 function QuickApp:updateTariffData()
@@ -181,18 +179,25 @@ function QuickApp:updateTariffData()
 end
 
 -- Variables and panel update display loop
-function QuickApp:displayLoop(first)
+function QuickApp:displayLoop(forceUpdate)
+    local loopTime = 5000
+
     -- Set Update display loop to every full hour + 1 min
-    local loopTime = 10000
-    if not first then loopTime = (61 - tonumber(os.date("%M"))) * 60 * 1000 end
+    if not forceUpdate then loopTime = (61 - tonumber(os.date("%M"))) * 60 * 1000 * 60 end
 
-     -- Refresh variable values
-    self:refreshVariables()
+    -- Get current Exchange rate from Exchangerate.host Api Service
+    local waitTime = 0
+    if (self.currency ~= "EUR") then -- If local currency already in Euro we don't need exchange rates.
+        self:getServiceExchangeData(QuickApp.setExchangeRate, self)
+        waitTime = 2000
+    end
 
-    -- Update FIBARO Tariff table if ON
-    --if self.storeTariffInFibaro == true then self:updateFibaroTariffTable() end
-    self:updateFibaroTariffTable()
+    -- Update FIBARO Tariff table (only wait 2 sec for Exchange rate http request to complete if currency not in EUR)
+    fibaro.setTimeout(waitTime, function() self:updateFibaroTariffTable() end)
 
     -- Start this display loop each hour
     fibaro.setTimeout(loopTime, function() self:displayLoop(false) end)
+
+     -- Refresh variable values
+    self:refreshVariables()
 end
