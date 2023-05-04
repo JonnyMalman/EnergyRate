@@ -26,6 +26,9 @@ function QuickApp:getCurrencySymbol()
     if (currency == "USD") then return "$" end
     if (currency == "GBP") then return "£" end
     if (currency == "YEN") then return "¥" end
+    if (currency == "SEK") then return "Kr" end
+    if (currency == "NOK") then return "Kr" end
+    if (currency == "DKK") then return "Kr" end
     return currency
 end
 
@@ -54,13 +57,18 @@ function QuickApp:toLocalDateId(dateString, addHour, timezoneOffset)
 end
 
 function QuickApp:toDate(dateId, format, addHour)
-    if dateId == "" then return "" end
+    if dateId == nil or dateId == "" then return "" end
     if format == nil then format = "%Y-%m-%d %H:%M" end
     if addHour == nil then addHour = 0 end
     -- Convert input dateId = "22122523" to Lua date format
     local iyear, imonth, iday, ihour = dateId:match("^(%d%d)(%d%d)(%d%d)(%d%d)$")
     local timestamp = os.time({year = iyear + 2000, month = imonth, day = iday, hour = ihour, min = iminute})
     return os.date(format, timestamp + (addHour * 60 * 60))
+end
+
+function QuickApp:toDefault(value)
+    if value == nil or value == "nan" then return "0" end
+    return value
 end
 
 -- Get ENTSO-e next day price release date in local time
