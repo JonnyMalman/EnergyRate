@@ -1,7 +1,7 @@
 -- Update FIBARO Tariff rate table
 function QuickApp:updateFibaroTariffTable()
     -- Exit if no data in global table or we got Service error
-    if (self:getGlobalFibaroVariable(self.global_var_fibaro_tariff_name, "ON") == "OFF" or self:tableCount(self.tariffData) == 0 or self.serviceSuccess == false) then return end
+    if (self:getGlobalFibaroVariable(self.global_var_fibaro_tariff_name, "ON") == "OFF" or self:tableCount(self.tariffData[self.areaName]) == 0 or self.serviceSuccess == false) then return end
 
     -- Get current FIBARO Energy Tariff rate data
     local tariffData = api.get("/energy/billing/tariff")
@@ -11,7 +11,7 @@ function QuickApp:updateFibaroTariffTable()
     local count = 0
         
     -- Update FIBARO Additional Tariff table in local currency/kWh and local timezone
-    for index, tariff in pairs(self.tariffData) do
+    for index, tariff in pairs(self.tariffData[self.areaName]) do
         local startTime = self:toDate(tariff.id, "%H:%M", 0)
         local endTime = self:toDate(tariff.id, "%H:%M", 1)
         local tariffName = self:toDate(tariff.id, self:getDateFormat(), 0) .." " ..startTime .." (" ..tariff.rate .." €/MWh)"
