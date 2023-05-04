@@ -8,15 +8,18 @@ function QuickApp:updateEnergyTariffTable(energyRateTable)
     local updateTariff = false
 
     -- Get current Energy Tariff data from global variables if empty
-    local tblCount = self:tableCount(self.tariffData)
+    local tblCount = self:tableCount(self.tariffData[self.areaName])
     if (tblCount == 0) then self.tariffData = self:getEnergyTariffTable() end
+    local areaRates = self.tariffData[self.areaName]
+    if (areaRates == nil) then areaRates = {} end
 
     -- Add ENTSO-e raw rates to Energy tariff table if not already exists
     local totalRate = 0;
+    
     for index, tariff in pairs(energyRateTable) do
         totalRate = totalRate + tariff.rate
-        if not (self:existsInEnergyTariffTable(tariff.id)) then
-            table.insert(self.tariffData, tariff)
+        if not (self:existsInEnergyTariffTable(areaRates, tariff.id)) then
+            table.insert(areaRates, tariff)
             updateTariff = true
             self:d("New ENTSO-e Energy rate added: " ..tariff.id .." = " ..tariff.rate)
         end
@@ -30,28 +33,29 @@ function QuickApp:updateEnergyTariffTable(energyRateTable)
     end
 
     -- Update Energy Tariff table if need to clean history
-    if updateTariff then tblCount = self:tableCount(self.tariffData) end
+    if updateTariff then tblCount = self:tableCount(areaRates) end
     if (tblCount > tariffHourHistory) then updateTariff = true end
 
     -- Update Energy tariff rates with sorted and cleaned Tariff data
     if updateTariff then
         -- Sort tariff table by Id (DateTime)
-        table.sort(self.tariffData, function (t1, t2) return t1.id < t2.id end )
+        table.sort(areaRates, function (t1, t2) return t1.id < t2.id end )
 
         -- Clean old Energy tartiff rates
         if (tariffHourHistory > 0 and tariffHourHistory < tblCount) then
             local cleanTariffs = {}
             local startIndex = tblCount - tariffHourHistory
-            for index, tariff in pairs(self.tariffData) do
+            for index, tariff in pairs(tariffRates) do
                 if index > startIndex then
                     table.insert(cleanTariffs, tariff)
                 end
             end
-            self.tariffData = cleanTariffs
+            areaRates = cleanTariffs
             self:d("Energy tariff table cleaned from old history: " ..startIndex .." hours")
         end
 
         -- Save Energy tariff table to FIBARO global variable
+        self.tariffData[self.areaName] = areaRates
         fibaro.setGlobalVariable(self.global_var_state_table_name, json.encode(self.tariffData))
         self:d("Energy Tariff table updated in FIBARO global variables")
     end
@@ -61,6 +65,9 @@ function QuickApp:getEnergyRateData()
     -- Get current Energy Tariff data from global variables if empty
     local tblCount = self:tableCount(self.tariffData)
     if (tblCount == 0) then self.tariffData = self:getEnergyTariffTable() end
+    local areaRates = self.tariffData[self.areaName]
+    if areaRates == nil then areaRates = {} end
+
     if self.tariffHistory == nil then self.tariffHistory = 365 end
     
     local energyPricesUpdated = false
@@ -91,7 +98,7 @@ function QuickApp:getEnergyRateData()
 
     -- Sum each FIBARO tariff rate (Rate is in €/MWh and id is in local format "YYMMDDHH")
     if (tblCount > 0) then
-        for index, tariff in pairs(self.tariffData) do
+        for index, tariff in pairs(areaRates) do
             -- Set first and last id
             if index == 1 then firstIdDate = tariff.id end
             lastIdDate = tariff.id
@@ -150,15 +157,15 @@ function QuickApp:getEnergyRateData()
         previousRate = string.format(self.valueFormat, previousRate),
         currentRate = string.format(self.valueFormat, currentRate),
         nextRate = string.format(self.valueFormat, nextRate),
-        avgTotalRate = string.format(self.valueFormat, totalRate / totalCount),
-        avgDayRate = string.format(self.valueFormat, totalDayRate / totalDayCount),
+        avgTotalRate = self:toDefault(string.format(self.valueFormat, totalRate / totalCount)),
+        avgDayRate = self:toDefault(string.format(self.valueFormat, totalDayRate / totalDayCount)),
         avgDayCount = totalDayCount,
-        avgMonthRate = string.format(self.valueFormat, totalMonthRate / totalMonthCount),
+        avgMonthRate = self:toDefault(string.format(self.valueFormat, totalMonthRate / totalMonthCount)),
         avgMonthCount = totalMonthCount,
         minDayRate = string.format(self.valueFormat, minDayRate),
         maxDayRate = string.format(self.valueFormat, maxDayRate),
         nextDayRate = nextDayRate,
-        avgNextDayRate = string.format(self.valueFormat, avgNextDayRate),
+        avgNextDayRate = self:toDefault(string.format(self.valueFormat, avgNextDayRate)),
         minNextDayRate = string.format(self.valueFormat, minNextDayRate),
         maxNextDayRate = string.format(self.valueFormat, maxNextDayRate),
         firstDate = self:toDate(firstIdDate, "%Y-%m-%d"),
@@ -171,9 +178,11 @@ function QuickApp:getEnergyRateData()
 end
 
 function QuickApp:IsEnergyTariffUpToDate()
+    local tblCount = self:tableCount(self.tariffData[self.areaName])
+    if (tblCount == 0) then return false end
+
     if self.tariffHistory == nil then self.tariffHistory = 365 end
     local tariffHourHistory = self.tariffHistory * 24
-    local tblCount = self:tableCount(self.tariffData)
     local dateFormat = "%y%m%d%H"
     local oneHour = 1 * 60 * 60        -- 1 hour
     local nextDayShift = 24 * 60 * 60  -- 24 hours
@@ -192,7 +201,7 @@ function QuickApp:IsEnergyTariffUpToDate()
     if (tonumber(os.date("%H", os.time())) >= self:getRateReleaseTime(self.timezoneOffset)) then nextDayExists = false end
 
     -- Check FIBARO Tariff if all rates already exists
-    for _, tariff in pairs(self.tariffData) do
+    for _, tariff in pairs(self.tariffData[self.areaName]) do
         if (tariff.id == os.date(dateFormat, os.time() - oneHour))      then previousExists = true end
         if (tariff.id == os.date(dateFormat, os.time()))                then currentExist = true end
         if (tariff.id == os.date(dateFormat, os.time() + oneHour))      then nextExists = true end
@@ -209,9 +218,9 @@ function QuickApp:IsEnergyTariffUpToDate()
 end
 
 -- Check if rate already exists in Energy tariff table
-function QuickApp:existsInEnergyTariffTable(match)
-    if self.tariffData == nil then return false end
-    for index, data in pairs(self.tariffData) do
+function QuickApp:existsInEnergyTariffTable(rates, match)
+    if rates == nil then return false end
+    for index, data in pairs(rates) do
         if (tostring(data.id) == tostring(match)) then return true end
     end
     self:d("Energy tariff id " ..match .." not exists!")
