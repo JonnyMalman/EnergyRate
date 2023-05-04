@@ -6,6 +6,7 @@
 
 function QuickApp:setExchangeRate(responseData)
     if responseData == nil then
+        self.exchangeRateUpdated = false
         self:debug("Exchange Rate: Error when request rate!")
     end
 
@@ -29,13 +30,16 @@ function QuickApp:getServiceExchangeData(callback, instance)
                                         end)
 
             if success then
+                self.exchangeRateUpdated = true
                 pcall(callback, instance, data)
             else
+                self.exchangeRateUpdated = false
                 self:debug("Broken json response from Url: " .. url)
                 return nil
             end
         end,
         error = function(message)
+            self.exchangeRateUpdated = false
             self:debug("Error:", message)
             return nil
         end
