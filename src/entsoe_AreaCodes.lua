@@ -6,7 +6,7 @@ function QuickApp:createAreaVariables()
             isEnum=true,
             readOnly=true,
             value=self.default_area_name,
-            enumValues={"Austria (AT)","Belgium (BE)","Bosnia and Herz. (BA)","Bulgaria (BG)","Croatia (HR)","Czech Republic (CZ)","Denmark (DK1)","Denmark (DK2)","Estonia (EE)","Finland (FI)","France (FR)","Germany (DE-LU)","Greece (GR)","Hungary (HU)","Ireland (SEM)","Italy (Calabria)","Italy (SACOAC)","Italy (SACODC)","Italy (Centre-North)","Italy (Centre-South)","Italy (North)","Italy (Sardinia)","Italy (Sicily)","Italy (South)","Latvia (LV)","Lithuania (LT)","Luxembourg (LU)","Netherlands (NL)","North Macedonia (MK)","Norway (NO1)","Norway (NO2)","Norway (NO2NSL)","Norway (NO3)","Norway (NO4)","Norway (NO5)","Poland (PL)","Portugal (PT)","Romania (RO)","Serbia (RS)","Slovakia (SK)","Slovenia (SI)","Spain (ES)","Sweden (SE1)","Sweden (SE2)","Sweden (SE3)","Sweden (SE4)","Switzerland (CH)","Ukraine (UA-IPS)","United Kingdom (GB)"}
+            enumValues={"[SELECT AREA]", "Austria (AT)","Belgium (BE)","Bosnia and Herz. (BA)","Bulgaria (BG)","Croatia (HR)","Czech Republic (CZ)","Denmark (DK1)","Denmark (DK2)","Estonia (EE)","Finland (FI)","France (FR)","Germany (DE-LU)","Greece (GR)","Hungary (HU)","Ireland (SEM)","Italy (Calabria)","Italy (SACOAC)","Italy (SACODC)","Italy (Centre-North)","Italy (Centre-South)","Italy (North)","Italy (Sardinia)","Italy (Sicily)","Italy (South)","Latvia (LV)","Lithuania (LT)","Luxembourg (LU)","Netherlands (NL)","North Macedonia (MK)","Norway (NO1)","Norway (NO2)","Norway (NO2NSL)","Norway (NO3)","Norway (NO4)","Norway (NO5)","Poland (PL)","Portugal (PT)","Romania (RO)","Serbia (RS)","Slovakia (SK)","Slovenia (SI)","Spain (ES)","Sweden (SE1)","Sweden (SE2)","Sweden (SE3)","Sweden (SE4)","Switzerland (CH)","Ukraine (UA-IPS)","United Kingdom (GB)"}
     }
     api.post('/globalVariables/',level_var)    
 end
@@ -15,6 +15,7 @@ function QuickApp:getAreaCode(areaName)
     -- Set default Area code if "areaName" is missing.
     if areaName == nil or areaName == "" then areaName = self.default_area_name end
     
+    if (areaName == "[SELECT AREA]") then return "" end
     if (areaName == "Austria (AT)") then return "10YAT-APG------L" end
     if (areaName == "Belgium (BE)") then return "10YBE----------2" end
     if (areaName == "Bosnia and Herz. (BA)") then return "10YBA-JPCC-----D" end
