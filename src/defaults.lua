@@ -6,7 +6,8 @@ function QuickApp:createGlobalVariableTable()
             readOnly=true,
             value=""
         }
-    api.post('/globalVariables/', table_var)
+    response, status = api.post('/globalVariables/', table_var)
+    self:d("Create global variable: " ..tostring(table_var.name) .." => " ..tostring(status) .." - " ..tostring(response.message))
 end
 
 function QuickApp:createGlobalVariables()
@@ -18,7 +19,8 @@ function QuickApp:createGlobalVariables()
             value="ON",
             enumValues={"ON","OFF"}
         }
-    api.post('/globalVariables/', tariff_var)
+    response, status = api.post('/globalVariables/', tariff_var)
+    self:d("Create global variable: " ..tostring(tariff_var.name) .." => " ..tostring(status) .." - " ..tostring(response.message))
 
     -- Create Energy Unit global variable
     local unit_var = {
@@ -28,7 +30,8 @@ function QuickApp:createGlobalVariables()
             value=self.default_unit,
             enumValues={"kWh","MWh"}
         }
-    api.post('/globalVariables/', unit_var)
+    response, status = api.post('/globalVariables/', unit_var)
+    self:d("Create global variable: " ..tostring(unit_var.name) .." => " ..tostring(status) .." - " ..tostring(response.message))
 
     -- Create Level rate global variable
     local level_var = {
@@ -38,15 +41,18 @@ function QuickApp:createGlobalVariables()
             value="HIGH",
             enumValues={"VeryLOW","LOW","MEDIUM","HIGH","VeryHIGH"}
         }
-    api.post('/globalVariables/', level_var)
+    response, status = api.post('/globalVariables/', level_var)
+    self:d("Create global variable: " ..tostring(level_var.name) .." => " ..tostring(status) .." - " ..tostring(response.message))
 
     -- Create Next Level rate global variable
     level_var.name = self.global_var_next_level_name
-    api.post('/globalVariables/', level_var)
+    response, status = api.post('/globalVariables/', level_var)
+    self:d("Create global variable: " ..tostring(level_var.name) .." => " ..tostring(status) .." - " ..tostring(response.message))
 
     -- Create Month Level rate global variable
     level_var.name = self.global_var_month_level_name
-    api.post('/globalVariables/', level_var)
+    response, status = api.post('/globalVariables/', level_var)
+    self:d("Create global variable: " ..tostring(level_var.name) .." => " ..tostring(status) .." - " ..tostring(response.message))
 
     self:d("FIBARO Global variables crated.")
 end
@@ -118,7 +124,9 @@ function QuickApp:refreshVariables()
     self.dealerCost = tonumber(self:getVariable(self.variable_dealer_cost_name))
     self.gridCost = tonumber(self:getVariable(self.variable_grid_cost_name))
 
-    self:updateProperty("unit", self.currency .. "/" ..self.unit)
+    if (self.currency ~= nil and self.unit ~= nil) then
+        self:updateProperty("unit", self.currency .. "/" ..self.unit)
+    end
 
     -- Set Energy rates data to display
     self:displayEnergyRate()
