@@ -17,30 +17,29 @@
     v1.1 New feature release 2023-03
         - Keeps Tariff rate history in FIBARO.
         - Show more usefull info in QA panel.
-        - Add new global month average level variable "EnergyMonthLevel" for those that pay energy consumtion per month average.
+        - Add new general month average level variable "EnergyMonthLevel" for those that pay energy consumtion per month average.
         - Add new QA variable "TariffHistory" for how many days to store history in FIBARO tariff rates.
         - Localized panel text for language: EN, DK, NO, SV (if you want to help me with translation, please send me an email at energyrate@jamdata.com)
 
         Braking changes that you need to change in your scenes if your using first release v1.0:
-            Global variable name change from "EnergyRateArea" to "EnergyArea".
-            Global variable name change from "EnergyRateMedium" to "EnergyMediumPrice".
-            Global variable name change from "EnergyRateLevel" to "EnergyHourLevel".
-            Global variable name change from "EnergyRateNextLevel" to "EnergyNextHourLevel".
+            General variable name change from "EnergyRateArea" to "EnergyArea".
+            General variable name change from "EnergyRateMedium" to "EnergyMediumPrice".
+            General variable name change from "EnergyRateLevel" to "EnergyHourLevel".
+            General variable name change from "EnergyRateNextLevel" to "EnergyNextHourLevel".
 
     v1.2 Customer wishes release 2023-04
         - Option to add tax to the energy price.
         - Show if service error message.
 
     v1.3 Customer improvements 2023-05
-        - Rewrite energy tariff table to store in global variable instead of FIBARO tariff table to solve negative energy prices.
+        - Rewrite energy tariff table to store in general variable instead of FIBARO tariff table to solve negative energy prices.
         - Fix UTC time when request next day energy prices from ENTSO-e.
         - Improved energy value display formatting, with price decimal local variable, also show correct price if very low or negative price. (Except FIBARO tariff that can't show negative values)
-        - All the rate levels are now set as local variables in real local energy price.
-        - Removed the global variable "EnergyMediumPrice", medium price is now set between Low and High prices in QA variables.
-        - Move global variable "EnergyTaxPercentage" to local variable as "EnergyTax".
-        - Add global variable ON/OFF to store prices in FIBARO Tariff rate table.
+        - All the rate levels are  moved from general to local variables and are in real local energy price.
+        - Move general variable "EnergyTaxPercentage" to local variable as "EnergyTax".
+        - Add general variable ON/OFF to store prices in FIBARO Tariff rate table.
         - Add translation in Portuguese (Thanks to Leandro C.).
-        - New variables to cost calculation formula: {[(ENTSO_cost + operator cost) x losses x adjustment] + dealer + localgrid} x tax (by Leandro C.).
+        - Add cost variables to calculate energy prices: {((ENTSO_price + operatorCost) x losses x adjustment) + dealer + localgrid} x tax (by Leandro C.).
 ]]
 
 function QuickApp:onInit()
@@ -92,6 +91,7 @@ function QuickApp:onInit()
 
     self.default_decimals = self:getDefaultPriceDecimals()              -- Get default number of decimals based on currency for prices display
     self.default_Low_price = self:getDefaultRatePrice(10)               -- 10% of medium price based on local currency
+    self.default_Medium_price = self:getDefaultRatePrice(100)             -- 100% of medium price based on local currency
     self.default_High_price = self:getDefaultRatePrice(160)             -- 160% of medium price based on local currency
     self.default_VeryHigh_price = self:getDefaultRatePrice(250)         -- 250% of medium price based on local currency
     
@@ -109,7 +109,6 @@ function QuickApp:onInit()
     self.serviceSuccess = true                                          -- Request ENTSO-e service success or fault
     self.exchangeRateUpdated = true
     self.serviceMessage = ""                                            -- Request ENTSO-e service error message
-    self.serviceLoopTime = 60000                                        -- Servie Loop time, start with each a minute
     
     -- Let´s start
     self:mainStart()
@@ -143,20 +142,18 @@ end
 function QuickApp:serviceRequestLoop(forceUpdate)
     -- Refresh variables
     self:refreshVariables()
+    local serviceLoopTime = 60000
 
     -- Check if table is already up to date, otherwise request service and update table  
-    if (self.areaCode ~= "" and forceUpdate) then
-        self.serviceLoopTime = 60 * 1000 * 60 -- Set Update service request loop to every hour
-        -- (tonumber(os.date("%M"))) * 
+    if (self.areaCode ~= "") then
+        serviceLoopTime = 60 * 1000 * 60 -- Set Update service request loop to every hour
         
         -- Only get Energy Rates from ENSO-e Service if missing in EnergyStateTable
-        if (not self:IsEnergyTariffUpToDate()) then self:updateTariffData() end
-    else
-        self.serviceLoopTime = 60000
+        if (not self:IsEnergyTariffUpToDate() or forceUpdate) then self:updateTariffData() end
     end
 
     -- Start this Service request loop
-    fibaro.setTimeout(self.serviceLoopTime, function() self:serviceRequestLoop(false) end)
+    fibaro.setTimeout(serviceLoopTime, function() self:serviceRequestLoop(false) end)
 
     -- Update variables and panel
     self:displayLoop(forceUpdate) 
