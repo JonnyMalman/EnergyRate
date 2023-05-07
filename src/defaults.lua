@@ -64,7 +64,8 @@ function QuickApp:setLocalVariables()
     self.token = self:getLocalVariable(self.variable_token_name, self.default_token)
 
     -- Get/Set local rate price variables
-    self.low_price = self:getLocalVariable(self.variable_Low_name, self.default_Low_price)
+    self.low_price = tonumber(self:getLocalVariable(self.variable_Low_name, self.default_Low_price))
+    self.medium_price = tonumber(self:getLocalVariable(self.variable_Medium_name, self.default_Medium_price))
     self.high_price = tonumber(self:getLocalVariable(self.variable_High_name, self.default_High_price))
     self.veryhigh_price = tonumber(self:getLocalVariable(self.variable_VeryHigh_name, self.default_VeryHigh_price))
 
