@@ -91,7 +91,9 @@ function QuickApp:displayEnergyRate()
     labelInfo = labelInfo ..self.i18n:get("EnergyArea") ..": " ..areaName .."\n"
     labelInfo = labelInfo ..self.i18n:get("AreaCode") ..": " ..areaCode .."\n"
     labelInfo = labelInfo ..self.i18n:get("TariffRateHistory") ..": " ..self.tariffHistory .." " ..self.i18n:get("days") .."\n"
-    labelInfo = labelInfo ..self.i18n:get("MediumRatePrice") ..": " ..self.low_price .." ~ " ..self.high_price .." " ..self:getCurrencySymbol() .."/" ..self.unit .."\n"
+    labelInfo = labelInfo ..self.i18n:get("LowRatePrice") ..": " ..self.low_price .." ~ " ..self.medium_price .." " ..self:getCurrencySymbol() .."/" ..self.unit .."\n"
+    labelInfo = labelInfo ..self.i18n:get("MediumRatePrice") ..": " ..self.medium_price .." ~ " ..self.high_price .." " ..self:getCurrencySymbol() .."/" ..self.unit .."\n"
+    labelInfo = labelInfo ..self.i18n:get("HighRatePrice") ..": " ..self.high_price .." ~ " ..self.veryhigh_price .." " ..self:getCurrencySymbol() .."/" ..self.unit .."\n"
 
     labelInfo = labelInfo .."\n"
     labelInfo = labelInfo ..self.i18n:get("EnergyRateUpdate") ..": " ..serviceUpdated .."\n"
@@ -99,28 +101,28 @@ function QuickApp:displayEnergyRate()
     labelInfo = labelInfo ..self.i18n:get("FibaroTariff") ..": " ..fibaro.getGlobalVariable(self.global_var_fibaro_tariff_name) .."\n"
 
     -- Only show if Tax value is set
-    if (self.tax ~= nil and self.tax > 0) then
+    if (self.tax ~= nil and self.tax ~= 0) then
         labelInfo = labelInfo .."\n"
         labelInfo = labelInfo ..refresh ..self.i18n:get("Tax") ..": " ..string.format("%.2f", self.tax) .."%"
     end
 
     -- Only show if Operator value is set
-    if (self.operatorCost > 0) then
+    if (self.operatorCost ~= 0) then
         labelInfo = labelInfo .."\n"
         labelInfo = labelInfo ..refresh ..self.i18n:get("OperatorCost") ..": " ..self.operatorCost .." " ..self:getCurrencySymbol() .."/"..self.unit
     end
     -- Only show if Losses value is set
-    if (self.gridLosses > 0) then
+    if (self.gridLosses ~= 0) then
         labelInfo = labelInfo .."\n"
         labelInfo = labelInfo ..refresh ..self.i18n:get("GridLosses") ..": " ..string.format("%.2f", self.gridLosses) .."%"
     end
     -- Only show if Adjustment value is set
-    if (self.gridAdjustment > 0) then
+    if (self.gridAdjustment ~= 0) then
         labelInfo = labelInfo .."\n"
         labelInfo = labelInfo ..refresh ..self.i18n:get("GridAdjustment") ..": " ..string.format("%.2f", self.gridAdjustment) .."%"
     end
     -- Only show if Dealer value is set
-    if (self.dealerCost > 0) then
+    if (self.dealerCost ~= 0) then
         labelInfo = labelInfo .."\n"
         labelInfo = labelInfo ..refresh ..self.i18n:get("DealerCost") ..": " ..self.dealerCost .." " ..self:getCurrencySymbol() .."/"..self.unit
     end
