@@ -149,7 +149,7 @@ function QuickApp:getRank(value)
     -- Return price rank from variable rank values
     local rank = "VeryLOW"
     if (value >= self.low_price) then rank = "LOW" end
-    if (value >  self.low_price and value < self.high_price) then rank = "MEDIUM" end
+    if (value >= self.medium_price) then rank = "MEDIUM" end
     if (value >= self.high_price) then rank = "HIGH" end
     if (value >= self.veryhigh_price) then rank = "VeryHIGH" end
 
@@ -168,9 +168,10 @@ function QuickApp:getRankIcon(value)
 end
 
 function QuickApp:getNextDirection(currentValue, nextValue)
+    -- ⬆️⬇️➡️ or ⇧⇨⇩
     if (currentValue == nil) then currentValue = 0 end
     if (nextValue == nil) then nextValue = 0 end
-    if (currentValue > nextValue) then return "⇩" end
-    if (currentValue < nextValue) then return "⇧" end
-    return "⇨"
+    if (currentValue > nextValue) then return "⬇️" end
+    if (currentValue < nextValue) then return "⬆️" end
+    return "➡️"
 end
