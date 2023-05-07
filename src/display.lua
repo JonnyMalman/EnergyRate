@@ -125,7 +125,7 @@ function QuickApp:displayEnergyRate()
         labelInfo = labelInfo ..refresh ..self.i18n:get("DealerCost") ..": " ..self.dealerCost .." " ..self:getCurrencySymbol() .."/"..self.unit
     end
     -- Only show if Grid value is set
-    if (self.gridCost > 0) then
+    if (self.gridCost ~= 0) then
         labelInfo = labelInfo .."\n"
         labelInfo = labelInfo ..refresh ..self.i18n:get("GridCost") ..": " ..self.gridCost .." " ..self:getCurrencySymbol() .."/"..self.unit
     end
