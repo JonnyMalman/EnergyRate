@@ -9,7 +9,7 @@ function QuickApp:updateFibaroTariffTable()
     local addTariffs = {}
     local currentRateTime = os.date("%y%m%d%H")
     local count = 0
-        
+
     -- Update FIBARO Additional Tariff table in local currency/kWh and local timezone
     for index, tariff in pairs(self.tariffData[self.areaName]) do
         local startTime = self:toDate(tariff.id, "%H:%M", 0)
@@ -18,9 +18,9 @@ function QuickApp:updateFibaroTariffTable()
 
         -- FIBARO only display price in kWh
         local locRate = self:getLocalTariffRate(tariff.rate, self.exchangeRate, "kWh", self.tax, self.operatorCost, self.gridLosses, self.gridAdjustment, self.dealerCost, self.gridCost)
-        
-         -- FIBARO Tariff table can't have negative values :(
-        if (locRate < 0) then
+
+        -- FIBARO Tariff table can't have negative values :(
+        if (locRate <= 0) then
             tariffName = tariffName .." " ..string.format("%f", locRate) .." ⛔"
             locRate = 0.00001
         end
@@ -33,14 +33,14 @@ function QuickApp:updateFibaroTariffTable()
         end
         
         -- Add additional tariff to local tariff table
-        local tariff = {
+        local newTariff = {
             name = tariffName,
             rate = locRate,
             startTime = startTime,
             endTime = endTime,
             days = {string.lower(self:toDate(tariff.id, "%A", 0))}
         }
-        table.insert(addTariffs, tariff)
+        table.insert(addTariffs, newTariff)
         count = count + 1
     end
 
@@ -52,5 +52,5 @@ function QuickApp:updateFibaroTariffTable()
         rate = currRate
     })
 
-    self:d("Update " ..count .." FIBARO Tariffs with response code: " .. tostring(code) .. " - \"" .. tariffData.name .. "\" Rate: " .. tariffData.rate .. " => " .. currRate)
+    self:d(" => Update " ..count .." FIBARO Tariffs with response code: " .. tostring(code) .. " - \"" .. tariffData.name .. "\" Rate: " .. tariffData.rate .. " => " .. currRate)
 end
