@@ -66,6 +66,17 @@ function QuickApp:toDate(dateId, format, addHour)
     return os.date(format, timestamp + (addHour * 60 * 60))
 end
 
+function QuickApp:updatePanel(dateString)
+    if dateString == nil or dateString == "" then return true end
+
+    -- Convert input dateString = "2022-12-25 23:00:00" to hour
+    local iyear, imonth, iday, ihour, iminute, isec = dateString:match("(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)")
+    local timestamp = os.time({year = iyear, month = imonth, day = iday, hour = ihour, min = iminute, sec = isec})
+    local lastHourUpdate = tonumber(os.date("%H", timestamp))
+
+    return lastHourUpdate ~= tonumber(os.date("%H"))
+end
+
 function QuickApp:toDefault(value)
     if value == nil or value == "nan" then return "0" end
     return value
