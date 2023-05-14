@@ -62,7 +62,8 @@ function QuickApp:displayEnergyRate()
         end
         
         serviceUpdated = self.serviceRequestTime
-        lastUpd = os.date("%Y-%m-%d %H:%M")
+        self.lastVariableUpdate = os.date("%Y-%m-%d %H:%M:%S")
+        lastUpd = self.lastVariableUpdate
         refresh = ""
         
         self:d("Display panels updated: " ..os.date("%H:%M:%S"))
