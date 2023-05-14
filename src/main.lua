@@ -109,7 +109,8 @@ function QuickApp:onInit()
     self.serviceSuccess = true                                          -- Request ENTSO-e service success or fault
     self.exchangeRateUpdated = true
     self.serviceMessage = ""                                            -- Request ENTSO-e service error message
-    
+    self.lastVariableUpdate = nil                                       -- Last general variable update
+
     -- Let´s start
     self:mainStart()
 end
@@ -177,24 +178,22 @@ end
 
 -- Variables and panel update display loop
 function QuickApp:displayLoop(forceUpdate)
-    local loopTime = 5000
+    -- Update display panel if next hour or force update
+    if (forceUpdate or self:updatePanel(self.lastVariableUpdate)) then
+        -- Get current Exchange rate from Exchangerate.host Api Service
+        local waitTime = 0
+        if (self.currency ~= "EUR") then -- If local currency already in Euro we don't need exchange rates.
+            self:getServiceExchangeData(QuickApp.setExchangeRate, self)
+            waitTime = 2000
+        end
 
-    -- Set Update display loop to every full hour + 1 min
-    if not forceUpdate then loopTime = (61 - tonumber(os.date("%M"))) * 60 * 1000 * 60 end
+        -- Update FIBARO Tariff table (only wait 2 sec for Exchange rate http request to complete if currency not in EUR)
+        fibaro.setTimeout(waitTime, function() self:updateFibaroTariffTable() end)
 
-    -- Get current Exchange rate from Exchangerate.host Api Service
-    local waitTime = 0
-    if (self.currency ~= "EUR") then -- If local currency already in Euro we don't need exchange rates.
-        self:getServiceExchangeData(QuickApp.setExchangeRate, self)
-        waitTime = 2000
+        -- Refresh variable values
+        self:refreshVariables()
     end
-
-    -- Update FIBARO Tariff table (only wait 2 sec for Exchange rate http request to complete if currency not in EUR)
-    fibaro.setTimeout(waitTime, function() self:updateFibaroTariffTable() end)
-
-    -- Start this display loop each hour
-    fibaro.setTimeout(loopTime, function() self:displayLoop(false) end)
-
-     -- Refresh variable values
-    self:refreshVariables()
+    
+    -- Start this display loop each minute
+    fibaro.setTimeout(60000, function() self:displayLoop(false) end)
 end
