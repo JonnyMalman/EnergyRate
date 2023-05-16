@@ -40,6 +40,10 @@
         - Add general variable ON/OFF to store prices in FIBARO Tariff rate table.
         - Add translation in Portuguese (Thanks to Leandro C.).
         - Add cost variables to calculate energy prices: {((ENTSO_price + operatorCost) x losses x adjustment) + dealer + localgrid} x tax (by Leandro C.).
+
+    v1.4 bug fix release 2023-05
+        - Fix Update timer for display panel and variables.
+        
 ]]
 
 function QuickApp:onInit()
