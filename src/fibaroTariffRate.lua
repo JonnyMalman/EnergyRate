@@ -21,7 +21,7 @@ function QuickApp:updateFibaroTariffTable()
 
         -- FIBARO Tariff table can't have negative values :(
         if (locRate <= 0) then
-            tariffName = tariffName .." " ..string.format("%f", locRate) .." ⛔"
+            tariffName = tariffName .." " ..string.format(self:getValueFormat(), locRate) .." ⛔"
             locRate = 0.00001
         end
 
