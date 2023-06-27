@@ -1,4 +1,4 @@
-function QuickApp:createGlobalVariableTable()
+function QuickApp:createGlobalTableVariable()
     -- Create Energy state table global variable
     local table_var = {
             name=self.global_var_state_table_name,
@@ -54,7 +54,7 @@ function QuickApp:createGlobalVariables()
     response, status = api.post('/globalVariables/', level_var)
     self:d("Create global variable: " ..tostring(level_var.name) .." => " ..tostring(status) .." - " ..tostring(response.message))
 
-    self:d("FIBARO Global variables crated.")
+    self:d("FIBARO Global variables created.")
 end
 
 function QuickApp:setLocalVariables()
@@ -68,6 +68,8 @@ function QuickApp:setLocalVariables()
     self.medium_price = tonumber(self:getLocalVariable(self.variable_Medium_name, self.default_Medium_price))
     self.high_price = tonumber(self:getLocalVariable(self.variable_High_name, self.default_High_price))
     self.veryhigh_price = tonumber(self:getLocalVariable(self.variable_VeryHigh_name, self.default_VeryHigh_price))
+
+    self.addTariffDate = self:getLocalVariable(self.variable_add_date_tariff_name, "")
 
     -- Get/Set local variable price decimals
     self.decimals = self:getLocalVariable(self.variable_price_decimals_name, self.default_decimals)
@@ -92,10 +94,10 @@ function QuickApp:setLocalVariables()
     self.areaCode = self:getAreaCode(self.areaName)
     self.unit = self:getGlobalFibaroVariable(self.global_var_unit_name, self.default_unit)
 
-    self:refreshVariables()
+    self:refreshDisplayVariables()
 end
 
-function QuickApp:refreshVariables()
+function QuickApp:refreshDisplayVariables()
     -- Get FIBARO settings
     local fibaroSettings = api.get("/settings/info")
     self.currency = fibaroSettings.currency
@@ -103,11 +105,17 @@ function QuickApp:refreshVariables()
     self.dateFormat = fibaroSettings.dateFormat
     self.i18n = i18n:new(fibaroSettings.defaultLanguage)
     
+    -- If Euro set exchange rate to 1:1
+    if (self.currency == "EUR") then self.exchangeRate = 1 end
+    
     -- Refrech global variables
     self.areaName = fibaro.getGlobalVariable(self.global_var_area_name)
     self.areaCode = self:getAreaCode(self.areaName)
-    self.tariffData = self:getEnergyTariffTable()
-    self.unit = fibaro.getGlobalVariable(self.global_var_unit_name) 
+    self.unit = fibaro.getGlobalVariable(self.global_var_unit_name)
+    if (self.unit == nil) then self.unit = "kWh" end
+
+    -- Load Tariff data table
+    self:loadEnergyTariffTable()
 
     -- Refresh QA variable values
     self.token = self:getVariable(self.variable_token_name)
@@ -125,16 +133,18 @@ function QuickApp:refreshVariables()
     self.dealerCost = tonumber(self:getVariable(self.variable_dealer_cost_name))
     self.gridCost = tonumber(self:getVariable(self.variable_grid_cost_name))
 
-    if (self.currency ~= nil and self.unit ~= nil) then
-        self:updateProperty("unit", self.currency .. "/" ..self.unit)
-    end
+    self.addTariffDate = self:getVariable(self.variable_add_date_tariff_name)
 
+    -- Update QA Unit property
+    self:updateProperty("unit", self:getCurrencySymbol() .. "/" ..tostring(self.unit))
+    
     -- Set Energy rates data to display
     self:displayEnergyRate()
 end
 
 -- Get local QA variable, set to default value if variable is missing
 function QuickApp:getLocalVariable(name, defaultValue)
+    if defaultValue == nil then defaultValue = "" end
     local value = self:getVariable(name)
 
     if (value == nil or value == "" or value == "nil") then
@@ -147,6 +157,7 @@ end
 
 -- Get local QA variable, set to default value if variable is missing
 function QuickApp:getGlobalFibaroVariable(name, defaultValue)
+    if defaultValue == nil then defaultValue = "" end
     local value = fibaro.getGlobalVariable(name)
 
     if (value == nil or value == "" or value == "nil") then
