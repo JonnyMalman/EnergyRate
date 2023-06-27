@@ -19,27 +19,29 @@ function QuickApp:displayEnergyRate()
     local prevDiff = string.format(self.valueFormat, tariffData.currentRate - tariffData.previousRate)
 
     -- Set dafaults
+    local labelInfo = ""
     local avgRate = 0
     local avgRank = ""
     local refresh = "♻️"
     local serviceUpdated = refresh
     local lastRqt = refresh ..self.i18n:get("LoadingEnergyRates") .."️..."
-    local lastUpd = refresh ..self.i18n:get("Refreshing") .."️..."    
+    local lastUpd = "(" ..tostring(self.lastVariableUpdate) ..") " ..refresh ..self.i18n:get("Refreshing") .."️..."    
     local areaName = self.areaName
     local areaCode = self.areaCode
 
     -- Set Exchange rate
     local exchangeRate = "--"
-    if (self.exchangeRate > 0) then exchangeRate = string.format(self.valueFormat, self.exchangeRate) end
+    if (self.exchangeRate ~= nil) then exchangeRate = string.format(self.valueFormat, self.exchangeRate) end
+
+    -- Show if any service error
+    if (self.serviceMessage ~= "") then labelInfo = "⛔ " ..self.serviceMessage .."\n\n" end
 
     -- If Service request failed
     if self.serviceSuccess == false then
         refresh = "⚠️"
-        lastUpd = "--"
-        areaCode = "--"
+        lastUpd = tostring(self.lastVariableUpdate)
         serviceUpdated = "--"
         areaName = self.areaName .."\n" ..refresh .." " ..self.i18n:get("MissingEnergyRatesForSelectedArea")
-        if (self.serviceMessage ~= "") then areaName = areaName .."\n⛔ " ..self.serviceMessage .."\n" end
     end
 
     -- Only update variables and tariff if we got "real" rate data
@@ -47,40 +49,52 @@ function QuickApp:displayEnergyRate()
         avgTotalRank = self:getRank(tariffData.avgTotalRate)
         avgDayRank = self:getRank(tariffData.avgDayRate)
         avgMonthRank = self:getRank(tariffData.avgMonthRate)
-
-        self:updateProperty('value', tonumber(tariffData.currentRate))
-        self:updateProperty('log', self:getRankIcon(rank) ..rank)
         
+        -- Update FIBARO general variables 
         fibaro.setGlobalVariable(self.global_var_level_name, rank)        
         fibaro.setGlobalVariable(self.global_var_next_level_name, nextRank)
         fibaro.setGlobalVariable(self.global_var_month_level_name, avgMonthRank)
 
+        -- Update QA with current hour price
+        self:updateProperty('value', tonumber(tariffData.currentRate))
+        self:updateProperty('log', self:getRankIcon(rank) ..rank)
+
+        -- Update child QA with next hour price
         if (self.next_rank_device_id ~= nil) then
+            fibaro.call(self.next_rank_device_id, 'setUnit', self:getDecimals(rateDiff, true) .." " ..nextDir)
+            fibaro.call(self.next_rank_device_id, 'setValue', math.floor(math.abs(rateDiff)))
             fibaro.call(self.next_rank_device_id, 'setLog', self:getRankIcon(nextRank) ..nextRank)
-            fibaro.call(self.next_rank_device_id, 'setUnit', " " .. nextDir)
-            fibaro.call(self.next_rank_device_id, 'setValue', rateDiff)
         end
         
         serviceUpdated = self.serviceRequestTime
-        self.lastVariableUpdate = os.date("%Y-%m-%d %H:%M:%S")
+        self.lastVariableUpdate = os.date("%Y-%m-%d %H:%M")
+        self.dataChanged = false
         lastUpd = self.lastVariableUpdate
         refresh = ""
         
-        self:d("Display panels updated: " ..os.date("%H:%M:%S"))
+        self:d("Display panels updated: " ..os.date("%Y-%m-%d %H:%M:%S"))
     end
 
     -- Update FIBARO Info panel
-    local labelInfo = self.i18n:get("TodayRates") .." (" ..self.i18n:get("Range") ..": " ..tariffData.minDayRate .." ~ " ..tariffData.maxDayRate .." " ..self:getCurrencySymbol() ..")\n"
-    labelInfo = labelInfo ..self:getRankIcon(rank) .." " ..self.i18n:get("CurrentHour") ..": " ..tariffData.currentRate .." " ..self:getCurrencySymbol() .." (" ..prevDiff .." " ..prevDir ..") - " ..self.i18n:get(rank) .."\n"
-    labelInfo = labelInfo ..self:getRankIcon(nextRank) .." " ..self.i18n:get("NextHour") ..": " ..tariffData.nextRate .." " ..self:getCurrencySymbol() .." (" ..rateDiff .." " ..nextDir ..") - " ..self.i18n:get(nextRank) .."\n"
-    labelInfo = labelInfo ..self:getRankIcon(avgDayRank) .." " ..self.i18n:get("TodayAverage") ..": " .. tariffData.avgDayRate .." " ..self:getCurrencySymbol() .." - " ..self.i18n:get(avgDayRank) .."\n\n"
+    if (tariffData.dayRatesExists == false) then
+        labelInfo = labelInfo .."⚠️ " ..self.i18n:get("TodayRatesMissing") .."\n"
+        labelInfo = labelInfo ..self.i18n:get("CurrentHour") .." --\n"
+        labelInfo = labelInfo ..self.i18n:get("NextHour") .." --\n"
+        labelInfo = labelInfo ..self.i18n:get("TodayAverage") .." --\n\n"
+    else
+        labelInfo = labelInfo ..self.i18n:get("TodayRates") .." (" ..self.i18n:get("Range") ..": " ..tariffData.minDayRate .." ~ " ..tariffData.maxDayRate .." " ..self:getCurrencySymbol() ..")\n"
+        labelInfo = labelInfo ..self:getRankIcon(rank) .." " ..self.i18n:get("CurrentHour") ..": " ..tariffData.currentRate .." " ..self:getCurrencySymbol() .." (" ..prevDiff .." " ..prevDir ..") - " ..self.i18n:get(rank) .."\n"
+        labelInfo = labelInfo ..self:getRankIcon(nextRank) .." " ..self.i18n:get("NextHour") ..": " ..tariffData.nextRate .." " ..self:getCurrencySymbol() .." (" ..rateDiff .." " ..nextDir ..") - " ..self.i18n:get(nextRank) .."\n"
+
+        labelInfo = labelInfo ..self:getRankIcon(avgDayRank) .." " ..self.i18n:get("TodayAverage") ..": " .. tariffData.avgDayRate .." " ..self:getCurrencySymbol() .." - " ..self.i18n:get(avgDayRank) .."\n\n"
+    end
 
     if (tariffData.nextDayRate == true) then
         local avgNextDayRank = self:getRank(tariffData.avgNextDayRate)
         labelInfo = labelInfo ..self.i18n:get("TomorrowRateRange") ..": " ..tariffData.minNextDayRate .." ~ " ..tariffData.maxNextDayRate .." " ..self:getCurrencySymbol() .."\n"
         labelInfo = labelInfo ..self:getRankIcon(avgNextDayRank) .." " ..self.i18n:get("TomorrowAverage") ..": " ..tariffData.avgNextDayRate .." " ..self:getCurrencySymbol() .." - " ..self.i18n:get(avgNextDayRank) .."\n\n"
     else
-        labelInfo = labelInfo ..self.i18n:get("TomorrowRatesReleases") .." " ..self:getRateReleaseTime(self.timezoneOffset) ..":00 (UTC: " ..self.nextday_releaseTime ..":00)\n"
+        --labelInfo = labelInfo ..self.i18n:get("TomorrowRatesReleases") .." ~" ..self:getRateReleaseTime(self.timezoneOffset, "!%H:%M") .."\n"
         labelInfo = labelInfo .."🕓 " ..self.i18n:get("TomorrowAverage") ..": --\n\n"
     end
 
@@ -89,17 +103,19 @@ function QuickApp:displayEnergyRate()
     labelInfo = labelInfo ..self:getRankIcon(avgTotalRank) .." " ..self.i18n:get("TotalTariffAverage") .. ": " ..tariffData.avgTotalRate .." " ..self:getCurrencySymbol() .." (" ..string.format("%.0f", tariffData.count/24) .." "  ..self.i18n:get("Days") ..")" .."\n"
 
     labelInfo = labelInfo .."\n"
-    labelInfo = labelInfo ..self.i18n:get("EnergyArea") ..": " ..areaName .."\n"
-    labelInfo = labelInfo ..self.i18n:get("AreaCode") ..": " ..areaCode .."\n"
-    labelInfo = labelInfo ..self.i18n:get("TariffRateHistory") ..": " ..self.tariffHistory .." " ..self.i18n:get("days") .."\n"
     labelInfo = labelInfo ..self.i18n:get("LowRatePrice") ..": " ..self.low_price .." ~ " ..self.medium_price .." " ..self:getCurrencySymbol() .."/" ..self.unit .."\n"
     labelInfo = labelInfo ..self.i18n:get("MediumRatePrice") ..": " ..self.medium_price .." ~ " ..self.high_price .." " ..self:getCurrencySymbol() .."/" ..self.unit .."\n"
     labelInfo = labelInfo ..self.i18n:get("HighRatePrice") ..": " ..self.high_price .." ~ " ..self.veryhigh_price .." " ..self:getCurrencySymbol() .."/" ..self.unit .."\n"
 
     labelInfo = labelInfo .."\n"
+    labelInfo = labelInfo ..self.i18n:get("EnergyArea") ..": " ..areaName .."\n"
+    --labelInfo = labelInfo ..self.i18n:get("AreaCode") ..": " ..areaCode .."\n" -- This is unnecessary information
+    labelInfo = labelInfo ..self.i18n:get("TariffRateHistory") ..": " ..self.tariffHistory .." " ..self.i18n:get("days") .."\n"
+    labelInfo = labelInfo ..self.i18n:get("FibaroTariff") ..": " ..fibaro.getGlobalVariable(self.global_var_fibaro_tariff_name) .."\n"
+    
+    labelInfo = labelInfo .."\n"
     labelInfo = labelInfo ..self.i18n:get("EnergyRateUpdate") ..": " ..serviceUpdated .."\n"
     labelInfo = labelInfo ..self.i18n:get("VariableUpdate") ..": " ..lastUpd .."\n"
-    labelInfo = labelInfo ..self.i18n:get("FibaroTariff") ..": " ..fibaro.getGlobalVariable(self.global_var_fibaro_tariff_name) .."\n"
 
     -- Only show if Tax value is set
     if (self.tax ~= nil and self.tax ~= 0) then
@@ -136,7 +152,8 @@ function QuickApp:displayEnergyRate()
     -- Only show if exchange currency is not in Euro
     if (self.currency ~= "EUR") then
         labelInfo = labelInfo .."\n"
-        labelInfo = labelInfo ..self.i18n:get("ExchangeRate") ..": 1 € = " ..exchangeRate .." " ..self:getCurrencySymbol()
+        labelInfo = labelInfo ..self.i18n:get("ExchangeRate") .." " ..self.exchangeRateLastDate ..": 1 € = " ..exchangeRate .." " ..self.currency --.."\n"
+        --labelInfo = labelInfo ..self.i18n:get("ExchangeRateLastUpdate") ..": " ..self.exchangeRateLastDate
     end
     
     -- If missing translation, just to trigger users to help me with translations ;)
