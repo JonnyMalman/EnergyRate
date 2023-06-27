@@ -3,25 +3,10 @@ function QuickApp:d(msg)
     if self.debugOn then self:debug(msg) end
 end
 
--- Get Energy Tariff table from global variable
-function QuickApp:getEnergyTariffTable()
-    local tariffData = {}
-    local jsonString = fibaro.getGlobalVariable(self.global_var_state_table_name)
-    
-    -- Create global variable if missing
-    if (jsonString == nil) then self:createGlobalVariableTable() end
-
-    -- Decode json string to table
-    if (jsonString ~= nil and jsonString ~= "") then 
-        tariffData = json.decode(jsonString)
-    end
-
-    return tariffData
-end
-
 -- Get currency symbol
 function QuickApp:getCurrencySymbol()
     local currency = self.currency
+    if (self.currency == nil) then currency = "EUR" end
     if (currency == "EUR") then return "€" end
     if (currency == "USD") then return "$" end
     if (currency == "GBP") then return "£" end
@@ -46,53 +31,101 @@ function QuickApp:getValueFormat()
     return "%." ..tostring(self.decimals) .."f"
 end
 
-function QuickApp:toLocalDateId(dateString, addHour, timezoneOffset)
+function QuickApp:toLocalDate(dateString, timezoneOffset, format)
     if dateString == "" then return "" end
-    if addHour == nil then addHour = 0 end
     if timezoneOffset == nil then timezoneOffset = 0 end
-    -- Convert input dateString = "2022-12-25 23:00" to table Id date "22122523"
+    if format == nil then format = "%Y%m%d" end
+
+    -- Convert input dateString = "2022-12-25 23:00" to table Id date "20221225"
     local iyear, imonth, iday, ihour, iminute = dateString:match("(%d+)-(%d+)-(%d+) (%d+):(%d+)")
     local timestamp = os.time({year = iyear, month = imonth, day = iday, hour = ihour, min = iminute}) + timezoneOffset
-    return os.date("%y%m%d%H", timestamp + (addHour * 60 * 60))
+    return os.date(format, timestamp)
 end
 
-function QuickApp:toDate(dateId, format, addHour)
+function QuickApp:toDate(dateId, hour, format, addHour)
     if dateId == nil or dateId == "" then return "" end
-    if format == nil then format = "%Y-%m-%d %H:%M" end
+    if hour == nil or hour == "" then hour = 0 end
+    if format == nil then format = "%Y-%m-%d" end
     if addHour == nil then addHour = 0 end
-    -- Convert input dateId = "22122523" to Lua date format
-    local iyear, imonth, iday, ihour = dateId:match("^(%d%d)(%d%d)(%d%d)(%d%d)$")
-    local timestamp = os.time({year = iyear + 2000, month = imonth, day = iday, hour = ihour, min = iminute})
+
+    -- Convert input dateId = "20221225" to Lua date format
+    local iyear, imonth, iday = dateId:match("^(%d%d%d%d)(%d%d)(%d%d)$")
+    local timestamp = os.time({year = iyear, month = imonth, day = iday, hour = hour})
     return os.date(format, timestamp + (addHour * 60 * 60))
 end
 
-function QuickApp:updatePanel(dateString)
-    if dateString == nil or dateString == "" then return true end
+function QuickApp:isDisplayPanelUpToDate()
+    --self:debug("Is Display Panel Up To Date: " ..tostring(self.exchangeRate) .." " ..tostring(self.lastExchange) .." " ..tostring(self.dataChanged))
+    
+    if self.dataChanged then return false end
+    --if self.lastExchange ~= self.exchangeRate then 
+    --    self.lastExchange = self.exchangeRate
+    --    return false
+    --end
+    
+    if self.lastVariableUpdate == nil or self.lastVariableUpdate == "" then return false end   
 
-    -- Convert input dateString = "2022-12-25 23:00:00" to hour
-    local iyear, imonth, iday, ihour, iminute, isec = dateString:match("(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)")
-    local timestamp = os.time({year = iyear, month = imonth, day = iday, hour = ihour, min = iminute, sec = isec})
+    -- Convert input self.lastVariableUpdate = "2022-12-25 23:00" to hour
+    local iyear, imonth, iday, ihour, iminute = self.lastVariableUpdate:match("(%d+)-(%d+)-(%d+) (%d+):(%d+)")
+    local timestamp = os.time({year = iyear, month = imonth, day = iday, hour = ihour, min = iminute, sec = 0})
     local lastHourUpdate = tonumber(os.date("%H", timestamp))
-
-    return lastHourUpdate ~= tonumber(os.date("%H"))
+    return lastHourUpdate == tonumber(os.date("%H"))
 end
 
-function QuickApp:toDefault(value)
-    if value == nil or value == "nan" then return "0" end
+function QuickApp:getNumbers(value)
+    if (value == nil) then return nil end
+    local str = ""
+    string.gsub(value, "%d+", function(e) str = str ..e end)
+    return str
+end
+
+function QuickApp:getDecimals(value, includePoint)
+    local x = tostring(value)
+    local isDecimal = false
+    local output = ""
+    local startPoint = 0
+    if (includePoint == nil or includePoint == true) then startPoint = 1 end
+
+    for i = 1, string.len(x) do
+        if isDecimal == false then
+            if string.sub(x, i + startPoint, i + startPoint) == "." then
+                isDecimal = true
+            end
+        else
+            output = output ..string.sub(x, i, i)
+        end
+    end
+    return output
+end
+
+function QuickApp:toDefault(value, default)
+    if default == nil then default = "" end
+    if value == nil or value == "nan" then return default end
     return value
 end
 
 -- Get ENTSO-e next day price release date in local time
-function QuickApp:getRateReleaseTime(timezoneOffset)
+function QuickApp:getRateReleaseTime(timezoneOffset, format)
     if timezoneOffset == nil then timezoneOffset = 0 end
-    return tonumber(os.date("!%H", os.time({year=2000, month=1, day=1, hour=self.nextday_releaseTime, min=0}) + timezoneOffset))
+    if format == nil then format = "!%H%M" end
+    return os.date(format, os.time({year=2000, month=1, day=1, hour=self.nextday_releaseHourUtc, min=10}) + timezoneOffset)
+end
+
+function QuickApp:isTimeForNextDayRates()
+    if (self.serviceSuccess == nil or self.timezoneOffset == nil or self.tariffAreaRates == nil) then return false end
+
+    if (self.serviceSuccess and tonumber(os.date("%H%M", os.time())) >= tonumber(self:getRateReleaseTime(self.timezoneOffset, "!%H%M"))) then
+        if (self:existsInEnergyTariffTable(self.tariffAreaRates, os.date("%Y%m%d", os.time() + 86400))) then return false end
+        return true
+    end
+    return false
 end
 
 -- Count items in a Lua table
-function QuickApp:tableCount(T)
+function QuickApp:tableCount(table)
     local count = 0
-    if T == nil or T == "" then return count end
-    for _ in pairs(T) do count = count + 1 end
+    if table == nil or table == "" then return count end
+    for _ in pairs(table) do count = count + 1 end
     return count
 end
 
@@ -105,36 +138,16 @@ function QuickApp:getXmlDate(xmlString, name, format)
 end
 
 -- Get xml element value
-function QuickApp:getXmlElement(data, name)
-    return data:match("<"..name..">(.-)</"..name..">")
+function QuickApp:getXmlElement(xml, name)
+    return xml:match("<"..name..">(.-)</"..name..">")
 end
 
--- Extract ENTSO-e prices from response xml into Lua table
-function QuickApp:xml2PriceTable(xml)
-    local priceTable = {}
-    local ni, c, label, xarg, empty
-    local i, j = 1, 1
-
-    while true do
-        ni, j, c, label, xarg, empty = string.find(xml, "<(%/?)([%w:_]+)(.-)(%/?)>", i)
-        if not ni then break end
-        local text = string.sub(xml, i, ni-1)
-   
-        if not string.find(text, "^%s*$") and label == "price" then
-            table.insert(priceTable, text)
-        end
-
-        i = j+1
-    end
-
-    return priceTable
-end
-
-function QuickApp:getLocalTariffRate(rawRate, exchangeRate, unit, tax, operator, losses, adjustment, dealer, grid)
-    if (exchangeRate == nil) then exchangeRate = 1 end
+-- Calculate tariff rate
+function QuickApp:calculateTariffRate(rawRate, exchRate, unit, tax, operator, losses, adjustment, dealer, grid)
+    if (rawRate == nil) then rawRate = 0 end
+    if (exchRate == nil or exchRate == 0) then exchRate = self.exchangeRate end
     if (tax == nil or tax == 0) then tax = 1 end
     if (tax > 1) then tax = (tax / 100) + 1 end -- Convert input tax from % to decimal if > 1
-    
     if (operator == nil) then operator = 0 end
     if (losses == nil or losses == 0) then losses = 1 end
     if (losses > 1) then losses = (losses / 100) + 1 end -- Convert input losses in % to decimal if > 1
@@ -148,7 +161,7 @@ function QuickApp:getLocalTariffRate(rawRate, exchangeRate, unit, tax, operator,
     if (unit == "MWh") then unitScale = 1 end 
     
     -- Recalculate main rate from EUR/mWh to {local currency}/{MWh or kWh} * tax
-    local rate = string.format("%f", ((((((rawRate * exchangeRate) / unitScale) + operator) * losses * adjustment) + dealer + grid) * tax))
+    local rate = string.format("%f", ((((((rawRate * exchRate) / unitScale) + operator) * losses * adjustment) + dealer + grid) * tax))
     return tonumber(rate)
 end
 
@@ -171,15 +184,15 @@ end
 
 function QuickApp:getRankIcon(value)
     if (value == "VeryHIGH") then return "🔴" end
-    if (value == "HIGH") then return "🟠" end
-    if (value == "MEDIUM") then return "🟡" end
-    if (value == "LOW") then return "🔵" end
-    if (value == "VeryLOW") then return "🟢" end
+    if (value == "HIGH")     then return "🟠" end
+    if (value == "MEDIUM")   then return "🟡" end
+    if (value == "LOW")      then return "🔵" end
+    if (value == "VeryLOW")  then return "🟢" end
     return "⛔" -- Wrong value
 end
 
 function QuickApp:getNextDirection(currentValue, nextValue)
-    -- ⬆️⬇️➡️ or ⇧⇨⇩
+    -- Examples ⬆️⬇️➡️ or ⇧⇨⇩
     if (currentValue == nil) then currentValue = 0 end
     if (nextValue == nil) then nextValue = 0 end
     if (currentValue > nextValue) then return "⬇️" end
