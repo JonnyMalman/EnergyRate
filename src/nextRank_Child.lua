@@ -4,18 +4,20 @@ function ENTSOE_Next_Rank:__init(device)
     QuickAppChild.__init(self, device) -- We must call a constructor from the parent class
 end
 
+-- Set QA Child Value
 function ENTSOE_Next_Rank:setValue(value)
     self:updateProperty("value", value)
 end
 
+-- Set QA Child Unit
 function ENTSOE_Next_Rank:setUnit(unit)
     self:updateProperty("unit", unit)
 end
 
+-- Set QA Child Log
 function ENTSOE_Next_Rank:setLog(log)
     self:updateProperty("log", log)
 end
-
 
 -- Validate if child panel exists, if not create it
 function QuickApp:validateChildren()
