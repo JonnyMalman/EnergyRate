@@ -1,0 +1,73 @@
+-- Check for QA update on FIBARO Marketplace
+function QuickApp:checkQAUpdates(force)
+    local nextCheck = string.upper(self:getLocalVariable("CheckQAVersion", "OFF")):gsub('-', '')
+    if (nextCheck == "ON") then nextCheck = 0 end
+        
+    if (force == true or (nextCheck ~= "OFF" and tonumber(nextCheck) <= tonumber(os.date("%Y%m%d")))) then
+        self:d("Check QA version at FIBARO Marketplace. Next check: " ..nextCheck)
+        self:GetMarketplaceQAVersion(QuickApp.SetQAVersion, self)
+    end
+end
+
+-- Set QA Version from response data
+function QuickApp:SetQAVersion(responseData)
+    if responseData == nil then return end
+    self:SetNextVersionCheck(self.checkQAUpdateDays)
+    
+    -- Find header on Marketplace site. i.e "Energy Spot Price vX.X | Marketplace FIBARO"
+    i, j = string.find(responseData, "|")
+    if i == nil or j == nil then return end
+    local header = string.sub(responseData, 1, j-1):match("^%s*(.-)%s*$")
+    self:d("Header: " ..header, tostring(i), tostring(j))
+
+    -- Find Version
+    k, l = string.find(header, "v")
+    if k == nil or l == nil then return end
+    local marketplaceVersion = string.sub(header, k+1, l-1):match("^%s*(.-)%s*$") -- Get version without spaces
+    self:d("Version: " ..marketplaceVersion, tostring(k), tostring(l))
+
+    -- Store FIBARO QA version
+    self.fibaroQaVersion = marketplaceVersion
+    self:setVariable("FibaroQAVersion", marketplaceVersion)
+end
+
+-- Set next version check in X days: 60s * 60m * 24h * Xd
+function QuickApp:SetNextVersionCheck(days)
+    local nextCheck = string.upper(self:getLocalVariable("CheckQAVersion", "OFF"))
+    
+    if (nextCheck ~= "OFF") then
+        local addDays = 60*60*24*days
+        local nextVersionCheck = os.date("%Y-%m-%d", os.time() + addDays)
+        self:setVariable("CheckQAVersion", nextVersionCheck)
+        self:d("Set next version check: " ..nextVersionCheck)
+    end
+end
+
+-- Get QA version on FIBARO Marketplace
+function QuickApp:GetMarketplaceQAVersion(callback, instance)
+    self:SetNextVersionCheck(1)
+
+    local httpClient = net.HTTPClient({timeout=2000})
+    local url = "https://marketplace.fibaro.com/items/entso-e-energy-rate"
+
+    httpClient:request(url, 
+    {
+        options = {
+            headers = {['content-type'] = 'application/x-www-form-urlencoded', },
+        },
+        success = function(response)
+        local success, data = pcall(function()
+                                    return string.sub(response.data, 1, 100) -- We only need check the beginning of the webpage.
+                                end)
+        if (response.status == 200) then
+            pcall(callback, instance, tostring(data))
+        else
+            self:debug("FIBARO Marketplace response Status: " ..tostring(response.status))
+            self:debug("Data: " ..tostring(response.data))
+        end
+        end,
+        error = function(message)
+            self:debug("ERROR: " ..message)
+        end
+    })
+end
