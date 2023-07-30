@@ -30,10 +30,10 @@
 - Add translation in Portuguese (Thanks to Leandro C.).
 - Add local QA cost variables to calculate energy prices: {((ENTSO_price + operatorCost) x losses x adjustment) + dealer + localgrid} x tax (by Leandro C.).
 
-## [v1.4] - bug fix release 2023-05
+## [v1.4] - Bug fix release 2023-05
 - Fix Update timer for display panel and variables. 
 
-## [v1.5] - fix Exchange rate 2023-06
+## [v1.5] - Fix Exchange rate 2023-06
 - Fix historical exchange rates when show in FIBARO Tariff table.
 - Add QA varible [AddTariffDate] if you want to add historical rates to energy table. Input format: "YYYY-MM-DD".
 
