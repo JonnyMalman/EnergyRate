@@ -29,6 +29,12 @@ function QuickApp:displayEnergyRate()
     local areaName = self.areaName
     local areaCode = self.areaCode
 
+    -- QA Version
+    local qaVersion = ""
+    if (self.fibaroQaVersion ~= "" and tonumber(self.fibaroQaVersion) > tonumber(self.version)) then
+        qaVersion = "\n\n⭐ New release v" ..self.fibaroQaVersion .." on FIBARO Marketplace. ⭐"
+    end
+
     -- Set Exchange rate
     local exchangeRate = "--"
     if (self.exchangeRate ~= nil) then exchangeRate = string.format(self.valueFormat, self.exchangeRate) end
@@ -61,8 +67,8 @@ function QuickApp:displayEnergyRate()
 
         -- Update child QA with next hour price
         if (self.next_rank_device_id ~= nil) then
-            fibaro.call(self.next_rank_device_id, 'setUnit', self:getDecimals(rateDiff, true) .." " ..nextDir)
-            fibaro.call(self.next_rank_device_id, 'setValue', math.floor(math.abs(rateDiff)))
+            fibaro.call(self.next_rank_device_id, 'setUnit', self:getCurrencySymbol() .." " ..nextDir)
+            fibaro.call(self.next_rank_device_id, 'setValue', tonumber(rateDiff))
             fibaro.call(self.next_rank_device_id, 'setLog', self:getRankIcon(nextRank) ..nextRank)
         end
         
@@ -86,18 +92,20 @@ function QuickApp:displayEnergyRate()
         labelInfo = labelInfo ..self:getRankIcon(rank) .." " ..self.i18n:get("CurrentHour") ..": " ..tariffData.currentRate .." " ..self:getCurrencySymbol() .." (" ..prevDiff .." " ..prevDir ..") - " ..self.i18n:get(rank) .."\n"
         labelInfo = labelInfo ..self:getRankIcon(nextRank) .." " ..self.i18n:get("NextHour") ..": " ..tariffData.nextRate .." " ..self:getCurrencySymbol() .." (" ..rateDiff .." " ..nextDir ..") - " ..self.i18n:get(nextRank) .."\n"
 
-        labelInfo = labelInfo ..self:getRankIcon(avgDayRank) .." " ..self.i18n:get("TodayAverage") ..": " .. tariffData.avgDayRate .." " ..self:getCurrencySymbol() .." - " ..self.i18n:get(avgDayRank) .."\n\n"
+        labelInfo = labelInfo ..self:getRankIcon(avgDayRank) .." " ..self.i18n:get("TodayAverage") ..": " .. tariffData.avgDayRate .." " ..self:getCurrencySymbol() .." - " ..self.i18n:get(avgDayRank) .."\n"
     end
 
     if (tariffData.nextDayRate == true) then
         local avgNextDayRank = self:getRank(tariffData.avgNextDayRate)
+        labelInfo = labelInfo .."\n"
         labelInfo = labelInfo ..self.i18n:get("TomorrowRateRange") ..": " ..tariffData.minNextDayRate .." ~ " ..tariffData.maxNextDayRate .." " ..self:getCurrencySymbol() .."\n"
-        labelInfo = labelInfo ..self:getRankIcon(avgNextDayRank) .." " ..self.i18n:get("TomorrowAverage") ..": " ..tariffData.avgNextDayRate .." " ..self:getCurrencySymbol() .." - " ..self.i18n:get(avgNextDayRank) .."\n\n"
-    else
+        labelInfo = labelInfo ..self:getRankIcon(avgNextDayRank) .." " ..self.i18n:get("TomorrowAverage") ..": " ..tariffData.avgNextDayRate .." " ..self:getCurrencySymbol() .." - " ..self.i18n:get(avgNextDayRank) .."\n"
+    --else
         --labelInfo = labelInfo ..self.i18n:get("TomorrowRatesReleases") .." ~" ..self:getRateReleaseTime(self.timezoneOffset, "!%H:%M") .."\n"
-        labelInfo = labelInfo .."🕓 " ..self.i18n:get("TomorrowAverage") ..": --\n\n"
+        --labelInfo = labelInfo .."🕓 " ..self.i18n:get("TomorrowAverage") ..": --\n\n"
     end
 
+    labelInfo = labelInfo .."\n"
     labelInfo = labelInfo ..self.i18n:get("TariffRatePeriod") ..": " ..tariffData.firstDate .." -- " ..tariffData.lastDate .."\n"
     labelInfo = labelInfo ..self:getRankIcon(avgMonthRank) .." " ..self.i18n:get("ThisMonthAverage") .. ": " ..tariffData.avgMonthRate .." " ..self:getCurrencySymbol() .." (" ..string.format("%.0f", tariffData.avgMonthCount/24) .." " ..self.i18n:get("Days") ..")\n"
     labelInfo = labelInfo ..self:getRankIcon(avgTotalRank) .." " ..self.i18n:get("TotalTariffAverage") .. ": " ..tariffData.avgTotalRate .." " ..self:getCurrencySymbol() .." (" ..string.format("%.0f", tariffData.count/24) .." "  ..self.i18n:get("Days") ..")" .."\n"
@@ -112,7 +120,7 @@ function QuickApp:displayEnergyRate()
     --labelInfo = labelInfo ..self.i18n:get("AreaCode") ..": " ..areaCode .."\n" -- This is unnecessary information
     labelInfo = labelInfo ..self.i18n:get("TariffRateHistory") ..": " ..self.tariffHistory .." " ..self.i18n:get("days") .."\n"
     labelInfo = labelInfo ..self.i18n:get("FibaroTariff") ..": " ..fibaro.getGlobalVariable(self.global_var_fibaro_tariff_name) .."\n"
-    
+        
     labelInfo = labelInfo .."\n"
     labelInfo = labelInfo ..self.i18n:get("EnergyRateUpdate") ..": " ..serviceUpdated .."\n"
     labelInfo = labelInfo ..self.i18n:get("VariableUpdate") ..": " ..lastUpd .."\n"
@@ -152,9 +160,11 @@ function QuickApp:displayEnergyRate()
     -- Only show if exchange currency is not in Euro
     if (self.currency ~= "EUR") then
         labelInfo = labelInfo .."\n"
-        labelInfo = labelInfo ..self.i18n:get("ExchangeRate") .." " ..self.exchangeRateLastDate ..": 1 € = " ..exchangeRate .." " ..self.currency --.."\n"
-        --labelInfo = labelInfo ..self.i18n:get("ExchangeRateLastUpdate") ..": " ..self.exchangeRateLastDate
+        labelInfo = labelInfo ..self.i18n:get("ExchangeRate") .." " ..self.exchangeRateLastDate ..": 1 € = " ..exchangeRate .." " ..self.currency
     end
+    
+    -- Show if new release exists on FIBARO Marketplace
+    labelInfo = labelInfo ..qaVersion .."\n"
     
     -- If missing translation, just to trigger users to help me with translations ;)
     if not (self.i18n.isTranslated) then
