@@ -53,12 +53,17 @@
 
         Braking changes from v1.4:
             All new tariff rates will now be stored in a new general variable [EnergyTariffTable] and all you old data will remain in [EnergyStateTable] until you delete it.
+
+    v1.6 Fix QA Child value display 2023-07
+        - Corrected QA Child to show negative values.
+        - Add Check for new QA update button. (Beta)
 ]]
 
--- QA Initialize
+-- QuickApp Initialize
 function QuickApp:onInit()
-    self.version = "v1.5"
-    self.debugOn = false     -- Write to debug console true/false
+    self.debugOn = false  -- Write to debug console true/false
+    self.deviceName = "ENTSO-e Energy Rate"
+    self.version = "1.6"
 
     self.httpClient = net.HTTPClient()
     
@@ -121,15 +126,17 @@ function QuickApp:onInit()
     self.dateFormat = self:getDateFormat()                        -- The FIBARO Date format setting ("YY-MM-DD", "DD.MM.YY" or "MM/DD/YY").
     self.valueFormat = self:getValueFormat(self.default_decimals) -- The value formatting of decimals when display Energy prices ie. "%.3f"
     self.serviceRequestTime = "--"                                -- Last datetime when we request ENTSO-e webservice.
-    self.serviceSuccess = true                                    -- Request ENTSO-e service success or fault.
-    self.exchangeRateUpdated = true                               -- Status if Exchange Rate is updated or not.
+    self.serviceSuccess = false                                   -- Request ENTSO-e service success or fault.
+    self.exchangeRateUpdated = false                              -- Status if Exchange Rate is updated or not.
     self.exchangeRateLastDate = ""                                -- Last datetime when we request Exchange Rate Api service.
-    self.exchangeRate = 1                                         -- Set default excahnge rate 1:1 for €
+    self.exchangeRate = 0                                         -- Set default excahnge rate 0
     self.serviceMessage = ""                                      -- Request ENTSO-e service error message.
-    self.lastVariableUpdate = nil                                 -- Last general variable update.
+    self.lastVariableUpdate = "--"                                -- Last general variable update.
     self.addTariffDate = ""                                       -- Add historical tariff rates from a date (YYYY-MM-DD).
-    self.dataChanged = true
-    self.lastExchange = nil
+    self.dataChanged = true                                       -- If data has change and display panel need to be updated 
+    self.lastExchange = nil                                       -- Last exchange rate value
+    self.fibaroQaVersion = ""                                     -- QA Version on FIBARO Marketplace
+    self.checkQAUpdateDays = 7                                    -- Check for new QA version in days on FIBARO Marketplace
 
     -- Let´s start the engine
     self:mainStart()
@@ -137,8 +144,8 @@ end
 
 -- QA Main start execution
 function QuickApp:mainStart()
-    self:debug(">>>> Start QuickApp ENTSO-e Energy Rate " ..self.version .." <<<<")
-
+    self:debug(">>>> Start QuickApp " ..self.deviceName .." v" ..self.version .." <<<<")
+    
     -- Create global varaiables (See: defaults)
     self:createAreaVariables()    
     self:createGlobalVariables()
@@ -149,7 +156,7 @@ function QuickApp:mainStart()
     
     -- set default values (See: defaults)
     self:setLocalVariables()           
-    
+
     -- Start main loop of requesting ExchangeRate and ENTSO-e services
     self:mainLoop(true)
 end
@@ -157,11 +164,14 @@ end
 -- Main loop that executes each minute
 function QuickApp:mainLoop(init)
     local loopTime = 2000
-
-    --self:debug("Main loop...")
-
+       
     -- Get current Exchange rate from Exchangerate.host Api Service if local currency is other than Euro
-    if (self.currency ~= "EUR") then self:getServiceExchangeData(QuickApp.setExchangeRate, self) end
+    if (self.currency == "EUR") then 
+        self.exchangeRate = 1           -- Set default excahnge rate 1:1 for €
+        self.exchangeRateUpdated = true
+    else 
+        self:getServiceExchangeData(QuickApp.setExchangeRate, self)
+    end
 
     if (init == false) then
         -- Update Energy Rates table from ENSO-e Service if AreaCode is set
@@ -175,6 +185,9 @@ function QuickApp:mainLoop(init)
             end)
         end
 
+        -- Check FIBARO Marketplace if QA update exists
+        pcall(function () self:checkQAUpdates(false) end)
+
         -- Set to loop to each minute
         loopTime = 60000 - (os.date("%S") * 1000)
     end
@@ -183,7 +196,7 @@ function QuickApp:mainLoop(init)
     fibaro.setTimeout(loopTime, function() self:mainLoop(false) end)
 end
 
--- Trigger if panel refresh button pressed
+-- Trigger if panel "Refresh" button pressed
 function QuickApp:refresh_action()
     self:d("Execute ENTSO-e service update on button event...")
     self:updateView("refreshButton", "text", "⌛ " ..self.i18n:get("Refreshing") .."...")
@@ -192,4 +205,10 @@ function QuickApp:refresh_action()
     self.dataChanged = true
     self:refreshEnergyTariffTable()
     fibaro.setTimeout(5000, function() self:refreshDisplayVariables() end)    
+end
+
+-- Trigger if panel "Check for Update" button pressed
+function QuickApp:checkUpdate_action()
+    pcall(function () self:checkQAUpdates(true) end)
+    fibaro.setTimeout(2000, function() self:refreshDisplayVariables() end)   
 end
