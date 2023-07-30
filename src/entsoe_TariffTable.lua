@@ -144,6 +144,7 @@ function QuickApp:getEnergyRateData()
     local nextDayRate = false
     local firstIdDate = ""
     local lastIdDate = ""
+    local exchRate = 0
 
     -- Sum each FIBARO tariff rate (Rate is in €/MWh and id is in local format "YYMMDDHH")
     local tblCount = self:tableCount(self.tariffAreaRates)
@@ -153,13 +154,14 @@ function QuickApp:getEnergyRateData()
             
             for index, tariff in pairs(dateTariff.rates) do
                 local time = index - 1
+                if (dateTariff.exch > 0) then exchRate = dateTariff.exch end
 
                 -- Set first and last id
                 if firstIdDate == "" then firstIdDate = dateTariff.date end
                 lastIdDate = dateTariff.date
 
                 -- Calculate to Local Tariff Rate price
-                local locRate = self:calculateTariffRate(tariff[1], dateTariff.exch, self.unit, self.tax, self.operatorCost, self.gridLosses, self.gridAdjustment, self.dealerCost, self.gridCost)
+                local locRate = self:calculateTariffRate(tariff[1], exchRate, self.unit, self.tax, self.operatorCost, self.gridLosses, self.gridAdjustment, self.dealerCost, self.gridCost)
 
                 -- Set total values
                 totalRate = totalRate + locRate
@@ -276,7 +278,7 @@ function QuickApp:existsInEnergyTariffTable(table, date, index)
     if table == nil or date == nil or date == "" then return false end
     
     for idx, tariff in pairs(table) do
-        self:d("--> Rate: " ..tostring(date) .." = " ..tariff.date .." " ..tostring(index) .." = " ..idx) --.." " ..tostring(tariff.rates[index][1]))
+        self:d("--> Rate: " ..tostring(date) .." = " ..tariff.date .." " ..tostring(index) .." = " ..idx)
         if (tariff.date == date and (index == nil or tariff.rates[index][1] ~= nil)) then
             self:d("Tariff rate exists: " ..date .. ", Index: " ..tostring(index))
             return true
