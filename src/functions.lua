@@ -55,14 +55,7 @@ function QuickApp:toDate(dateId, hour, format, addHour)
 end
 
 function QuickApp:isDisplayPanelUpToDate()
-    --self:debug("Is Display Panel Up To Date: " ..tostring(self.exchangeRate) .." " ..tostring(self.lastExchange) .." " ..tostring(self.dataChanged))
-    
-    if self.dataChanged then return false end
-    --if self.lastExchange ~= self.exchangeRate then 
-    --    self.lastExchange = self.exchangeRate
-    --    return false
-    --end
-    
+    if self.dataChanged then return false end    
     if self.lastVariableUpdate == nil or self.lastVariableUpdate == "" then return false end   
 
     -- Convert input self.lastVariableUpdate = "2022-12-25 23:00" to hour
@@ -77,25 +70,6 @@ function QuickApp:getNumbers(value)
     local str = ""
     string.gsub(value, "%d+", function(e) str = str ..e end)
     return str
-end
-
-function QuickApp:getDecimals(value, includePoint)
-    local x = tostring(value)
-    local isDecimal = false
-    local output = ""
-    local startPoint = 0
-    if (includePoint == nil or includePoint == true) then startPoint = 1 end
-
-    for i = 1, string.len(x) do
-        if isDecimal == false then
-            if string.sub(x, i + startPoint, i + startPoint) == "." then
-                isDecimal = true
-            end
-        else
-            output = output ..string.sub(x, i, i)
-        end
-    end
-    return output
 end
 
 function QuickApp:toDefault(value, default)
@@ -145,7 +119,7 @@ end
 -- Calculate tariff rate
 function QuickApp:calculateTariffRate(rawRate, exchRate, unit, tax, operator, losses, adjustment, dealer, grid)
     if (rawRate == nil) then rawRate = 0 end
-    if (exchRate == nil or exchRate == 0) then exchRate = self.exchangeRate end
+    if (exchRate == nil or exchRate == 0) then exchRate = 1 end -- Set default excahnge rate 1:1 for €
     if (tax == nil or tax == 0) then tax = 1 end
     if (tax > 1) then tax = (tax / 100) + 1 end -- Convert input tax from % to decimal if > 1
     if (operator == nil) then operator = 0 end
