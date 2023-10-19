@@ -23,35 +23,28 @@ function QuickApp:displayEnergyRate()
     local avgRate = 0
     local avgRank = ""
     local refresh = "♻️"
-    local serviceUpdated = refresh
     local lastRqt = refresh ..self.i18n:get("LoadingEnergyRates") .."️..."
     local lastUpd = "(" ..tostring(self.lastVariableUpdate) ..") " ..refresh ..self.i18n:get("Refreshing") .."️..."    
     local areaName = self.areaName
     local areaCode = self.areaCode
-
-    -- QA Version
-    local qaVersion = ""
-    if (self.fibaroQaVersion ~= "" and tonumber(self.fibaroQaVersion) > tonumber(self.version)) then
-        qaVersion = "\n\n⭐ New release v" ..self.fibaroQaVersion .." on FIBARO Marketplace. ⭐"
-    end
 
     -- Set Exchange rate
     local exchangeRate = "--"
     if (self.exchangeRate ~= nil) then exchangeRate = string.format(self.valueFormat, self.exchangeRate) end
 
     -- Show if any service error
-    if (self.serviceMessage ~= "") then labelInfo = "⛔ " ..self.serviceMessage .."\n\n" end
-
+    if (self:isNotEmpty(self.entsoeServiceMessage)) then labelInfo = labelInfo .."⛔ " ..self.entsoeServiceMessage .."\n\n" end
+    if (self:isNotEmpty(self.exchServiceMessage)) then labelInfo = labelInfo .."⛔ " ..self.exchServiceMessage .."\n\n" end
+    
     -- If Service request failed
     if self.serviceSuccess == false then
         refresh = "⚠️"
         lastUpd = tostring(self.lastVariableUpdate)
-        serviceUpdated = "--"
         areaName = self.areaName .."\n" ..refresh .." " ..self.i18n:get("MissingEnergyRatesForSelectedArea")
     end
 
     -- Only update variables and tariff if we got "real" rate data
-    if tariffData.energyPricesUpdated == true and self.exchangeRateUpdated == true then
+    if tariffData.energyPricesUpdated == true then
         avgTotalRank = self:getRank(tariffData.avgTotalRate)
         avgDayRank = self:getRank(tariffData.avgDayRate)
         avgMonthRank = self:getRank(tariffData.avgMonthRate)
@@ -72,7 +65,6 @@ function QuickApp:displayEnergyRate()
             fibaro.call(self.next_rank_device_id, 'setLog', self:getRankIcon(nextRank) ..nextRank)
         end
         
-        serviceUpdated = self.serviceRequestTime
         self.lastVariableUpdate = os.date("%Y-%m-%d %H:%M")
         self.dataChanged = false
         lastUpd = self.lastVariableUpdate
@@ -100,9 +92,6 @@ function QuickApp:displayEnergyRate()
         labelInfo = labelInfo .."\n"
         labelInfo = labelInfo ..self.i18n:get("TomorrowRateRange") ..": " ..tariffData.minNextDayRate .." ~ " ..tariffData.maxNextDayRate .." " ..self:getCurrencySymbol() .."\n"
         labelInfo = labelInfo ..self:getRankIcon(avgNextDayRank) .." " ..self.i18n:get("TomorrowAverage") ..": " ..tariffData.avgNextDayRate .." " ..self:getCurrencySymbol() .." - " ..self.i18n:get(avgNextDayRank) .."\n"
-    --else
-        --labelInfo = labelInfo ..self.i18n:get("TomorrowRatesReleases") .." ~" ..self:getRateReleaseTime(self.timezoneOffset, "!%H:%M") .."\n"
-        --labelInfo = labelInfo .."🕓 " ..self.i18n:get("TomorrowAverage") ..": --\n\n"
     end
 
     labelInfo = labelInfo .."\n"
@@ -122,7 +111,7 @@ function QuickApp:displayEnergyRate()
     labelInfo = labelInfo ..self.i18n:get("FibaroTariff") ..": " ..fibaro.getGlobalVariable(self.global_var_fibaro_tariff_name) .."\n"
         
     labelInfo = labelInfo .."\n"
-    labelInfo = labelInfo ..self.i18n:get("EnergyRateUpdate") ..": " ..serviceUpdated .."\n"
+    labelInfo = labelInfo ..self.i18n:get("EnergyRateUpdate") ..": " ..self.serviceRequestTime .."\n"
     labelInfo = labelInfo ..self.i18n:get("VariableUpdate") ..": " ..lastUpd .."\n"
 
     -- Only show if Tax value is set
@@ -160,11 +149,9 @@ function QuickApp:displayEnergyRate()
     -- Only show if exchange currency is not in Euro
     if (self.currency ~= "EUR") then
         labelInfo = labelInfo .."\n"
-        labelInfo = labelInfo ..self.i18n:get("ExchangeRate") .." " ..self.exchangeRateLastDate ..": 1 € = " ..exchangeRate .." " ..self.currency
+        if (self:isNotEmpty(self.exchServiceMessage)) then labelInfo = labelInfo .."⚠️ " end
+        labelInfo = labelInfo ..self.i18n:get("ExchangeRate") .." " ..tostring(self.exchangeLastUpdate) ..": 1 € = " ..exchangeRate .." " ..self.currency
     end
-    
-    -- Show if new release exists on FIBARO Marketplace
-    labelInfo = labelInfo ..qaVersion .."\n"
     
     -- If missing translation, just to trigger users to help me with translations ;)
     if not (self.i18n.isTranslated) then
