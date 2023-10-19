@@ -1,6 +1,6 @@
 -- Write to console if debug=true
 function QuickApp:d(msg)
-    if self.debugOn then self:debug(msg) end
+    if self.debugLog then self:debug(msg) end
 end
 
 -- Get currency symbol
@@ -42,6 +42,7 @@ function QuickApp:toLocalDate(dateString, timezoneOffset, format)
     return os.date(format, timestamp)
 end
 
+-- Convert a dateid string to Lua date
 function QuickApp:toDate(dateId, hour, format, addHour)
     if dateId == nil or dateId == "" then return "" end
     if hour == nil or hour == "" then hour = 0 end
@@ -54,9 +55,27 @@ function QuickApp:toDate(dateId, hour, format, addHour)
     return os.date(format, timestamp + (addHour * 60 * 60))
 end
 
-function QuickApp:isDisplayPanelUpToDate()
-    if self.dataChanged then return false end    
-    if self.lastVariableUpdate == nil or self.lastVariableUpdate == "" then return false end   
+-- Convert a string to boolean
+function QuickApp:toBool(value)
+    if (value == nil or value == "" or string.len(value) == 0) then return false end
+    value = string.upper(value)
+    local state = string.sub(value, 1, 1)
+    if (state == "T" or state == "Y" or state == "J" or value == "ON") then return true end
+    return false
+end
+
+function QuickApp:isEmpty(value)
+    if (value == nil or string.gsub(value, "%s+", "") == "") then return true end
+    return false
+end
+
+function QuickApp:isNotEmpty(value)
+    if (value == nil or string.gsub(value, "%s+", "") == "") then return false end
+    return true
+end
+
+function QuickApp:isDisplayPanelUpToDate(force)
+    if force == nil or force or self:isEmpty(self.lastVariableUpdate) then return false end
 
     -- Convert input self.lastVariableUpdate = "2022-12-25 23:00" to hour
     local iyear, imonth, iday, ihour, iminute = self.lastVariableUpdate:match("(%d+)-(%d+)-(%d+) (%d+):(%d+)")
@@ -117,7 +136,7 @@ function QuickApp:getXmlElement(xml, name)
 end
 
 -- Calculate tariff rate
-function QuickApp:calculateTariffRate(rawRate, exchRate, unit, tax, operator, losses, adjustment, dealer, grid)
+function QuickApp:calculateTariffRate(rawRate, exchRate, unit, tax, operator, losses, adjustment, dealer, grid, allowNegative)
     if (rawRate == nil) then rawRate = 0 end
     if (exchRate == nil or exchRate == 0) then exchRate = 1 end -- Set default excahnge rate 1:1 for €
     if (tax == nil or tax == 0) then tax = 1 end
@@ -135,8 +154,12 @@ function QuickApp:calculateTariffRate(rawRate, exchRate, unit, tax, operator, lo
     if (unit == "MWh") then unitScale = 1 end 
     
     -- Recalculate main rate from EUR/mWh to {local currency}/{MWh or kWh} * tax
-    local rate = string.format("%f", ((((((rawRate * exchRate) / unitScale) + operator) * losses * adjustment) + dealer + grid) * tax))
-    return tonumber(rate)
+    local rate = tonumber(string.format("%f", ((((((rawRate * exchRate) / unitScale) + operator) * losses * adjustment) + dealer + grid) * tax)))
+
+    -- Don't return negative prices if not allow
+    if (allowNegative ~= nil and allowNegative == false and rate < 0) then rate = 0 end
+
+    return rate
 end
 
 function QuickApp:getRank(value)
@@ -146,6 +169,7 @@ function QuickApp:getRank(value)
 
     -- Return price rank from variable rank values
     local rank = "VeryLOW"
+    if (value < 0) then rank = "Negative" end
     if (value >= self.low_price) then rank = "LOW" end
     if (value >= self.medium_price) then rank = "MEDIUM" end
     if (value >= self.high_price) then rank = "HIGH" end
@@ -162,6 +186,7 @@ function QuickApp:getRankIcon(value)
     if (value == "MEDIUM")   then return "🟡" end
     if (value == "LOW")      then return "🔵" end
     if (value == "VeryLOW")  then return "🟢" end
+    if (value == "Negative")  then return "🟣" end
     return "⛔" -- Wrong value
 end
 
@@ -169,7 +194,7 @@ function QuickApp:getNextDirection(currentValue, nextValue)
     -- Examples ⬆️⬇️➡️ or ⇧⇨⇩
     if (currentValue == nil) then currentValue = 0 end
     if (nextValue == nil) then nextValue = 0 end
-    if (currentValue > nextValue) then return "⬇️" end
-    if (currentValue < nextValue) then return "⬆️" end
+    if (tonumber(currentValue) > tonumber(nextValue)) then return "⬇️" end
+    if (tonumber(currentValue) < tonumber(nextValue)) then return "⬆️" end
     return "➡️"
 end
