@@ -68,10 +68,10 @@ function QuickApp:updateEnergyTariffTable(energyRateTable)
     -- If all rates in response table is 0 then not update Energy Tariff table, something is wrong!?
     if (updateTable and totalRate == 0) then
         self.serviceSuccess = false -- Something got wrong in ENTSO-e request
-        self:debug("Error in ENTSO-e Energy rate data!")
+        QuickApp:error("Error in ENTSO-e Energy rate data!")
         return
     end
-
+        
     -- Add new rates to Area Tariff table
     if (updateTable) then
         table.insert(self.tariffAreaRates, {date = tariffDate, exch = exchRate, rates = dayRates})
@@ -125,7 +125,7 @@ function QuickApp:getEnergyRateData()
     local nextDayDate = os.date("%Y%m%d", os.time() + 86400)
     local oneHour = 1 * 60 * 60          -- 1 hour
     local previousRate = self.high_price -- Set default to High price
-    local currentRate = self.high_price  -- Set default to High price
+    local currentRate = nil  -- Set default to High price
     local nextRate = self.high_price     -- Set default to High price
     local dayRatesExists = false
     local totalCount = 0
@@ -161,7 +161,7 @@ function QuickApp:getEnergyRateData()
                 lastIdDate = dateTariff.date
 
                 -- Calculate to Local Tariff Rate price
-                local locRate = self:calculateTariffRate(tariff[1], exchRate, self.unit, self.tax, self.operatorCost, self.gridLosses, self.gridAdjustment, self.dealerCost, self.gridCost)
+                local locRate = self:calculateTariffRate(tariff[1], exchRate, self.unit, self.tax, self.operatorCost, self.gridLosses, self.gridAdjustment, self.dealerCost, self.gridCost, self.allowNegative)
 
                 -- Set total values
                 totalRate = totalRate + locRate
@@ -211,6 +211,16 @@ function QuickApp:getEnergyRateData()
         nextDayRate = true
     end
 
+    -- Set current price if not exists
+    local storeRate = tostring(currentRate)
+    if (currentRate == nil) then
+        currentRate = self.high_price
+        storeRate = ""
+    end
+
+    -- Store current rate price to general variable
+    fibaro.setGlobalVariable(self.global_var_current_rate_name, storeRate)
+
     -- Set return Tariff Data table
     local tariffData = {
         energyPricesUpdated = energyPricesUpdated,
@@ -252,35 +262,35 @@ end
 -- Update Tariff table with history rates
 function QuickApp:updateHistoryTariffRates()
     -- Get date from local variable
-    self.addTariffDate = self:getVariable(self.variable_add_date_tariff_name)
+    self.addTariffDate = self:getVariable(self.var_add_date_tariff_name)
     local addTariffDate = self:getNumbers(self.addTariffDate)
 
     if (self.serviceSuccess == false or addTariffDate == nil or addTariffDate == "" or addTariffDate == "0") then return end
     
-    -- Get history Exchange rate from Exchangerate.host Api Service
-    if (self.currency ~= "EUR") then -- If local currency already in Euro we don't need exchange rates.
-        self:getServiceExchangeData(QuickApp.setExchangeRate, self, self:toDate(addTariffDate))
-    end
+    -- Get history Exchange rate from Exchangerate.host Api Service !! This not supported on Free account anymore !!
+    --if (self.currency ~= "EUR") then -- If local currency already in Euro we don't need exchange rates.
+    --    self:getServiceExchangeData(QuickApp.setExchangeRate, self, self:toDate(addTariffDate))
+    --end
 
     fibaro.setTimeout(2000, function() 
-        local exchHistRate = self.exchangeHistoryRate
+        local exchHistRate = self.exchangeRate
         self:getServiceRateData(QuickApp.updateEnergyTariffTable, self, addTariffDate, exchHistRate, false)
         self:debug("Add extra energy tariff rates for date: " ..addTariffDate .." Exchange rate: 1 € = " ..exchHistRate .." " ..self.currency)
 
         self.addTariffDate = ""
-        self:setVariable(self.variable_add_date_tariff_name, dateString)
+        self:setVariable(self.var_add_date_tariff_name, dateString)
     end)
 end
 
 -- Check if rate already exists in Energy tariff table
 function QuickApp:existsInEnergyTariffTable(table, date, index)
-    self:d("Check if Tariff rate exists: " ..tostring(date) .. ", Index: " ..tostring(index) ..", Table: " ..tostring(table))
+    self:d("Check if Tariff rate exists: " ..tostring(date) .. ", Index: " ..tostring(index) ..", " ..tostring(table))
     if table == nil or date == nil or date == "" then return false end
     
     for idx, tariff in pairs(table) do
-        self:d("--> Rate: " ..tostring(date) .." = " ..tariff.date .." " ..tostring(index) .." = " ..idx)
+        -- self:d("--> Rate: " ..tostring(date) .." = " ..tariff.date .." [" ..tostring(index) .."] = " ..idx)
         if (tariff.date == date and (index == nil or tariff.rates[index][1] ~= nil)) then
-            self:d("Tariff rate exists: " ..date .. ", Index: " ..tostring(index))
+            self:d("Tariff rate for " ..date .." exists")
             return true
         end
     end
