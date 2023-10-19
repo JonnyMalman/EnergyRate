@@ -11,6 +11,8 @@ function QuickApp:getServiceRateData(callback, instance, date, exchRate, reportE
     -- Don´t request ENTSO-e service if we already have the requested energy rates in table
     if (self:existsInEnergyTariffTable(self.tariffAreaRates, date)) then
         self:d("ENTSO-e rate already exists for date: " ..date .." (Exch: " ..tostring(exchRate) ..")")
+        if (self.serviceRequestTime == "--") then self.dataChanged = true end
+        self.serviceRequestTime = self:toDate(date)
         self.serviceSuccess = true
         return nil
     end
@@ -43,8 +45,8 @@ function QuickApp:getServiceRateData(callback, instance, date, exchRate, reportE
                 if data == nil then
                     if (reportError == true) then
                         self.serviceSuccess = false
-                        self.serviceMessage = "ERROR: Empty response from Url " ..url
-                        self:debug(self.serviceMessage)
+                        self.entsoeServiceMessage = "ERROR: Empty response from Url " ..url
+                        QuickApp:error(self.entsoeServiceMessage)
                     end
                     return nil
                 end
@@ -66,7 +68,7 @@ function QuickApp:getServiceRateData(callback, instance, date, exchRate, reportE
 
                 self.serviceRequestTime = os.date(self:getDateFormat()) .." " ..os.date("%H:%M")
                 self.serviceSuccess = true
-                self.serviceMessage = ""
+                self.entsoeServiceMessage = ""
                 self.dataChanged = true
                 self:d("=> ENTSO-e Success response: Start UTC = " .. startDate .. ", End UTC = " .. endDate .. ", " .. self:tableCount(ratePrices) .. " rates")
                 
@@ -74,8 +76,9 @@ function QuickApp:getServiceRateData(callback, instance, date, exchRate, reportE
             else
                 if (reportError == true) then
                     self.serviceSuccess = false
-                    self.serviceMessage = "Error: Can't get energy rates from ENTSO-e for area: " ..self.areaName
-                    self:debug(self.serviceMessage)
+                    self.dataChanged = true
+                    self.entsoeServiceMessage = "Error: Can't get energy rates from ENTSO-e for area: " ..self.areaName
+                    QuickApp:error(self.entsoeServiceMessage)
                 end
                 return nil
             end
@@ -83,8 +86,8 @@ function QuickApp:getServiceRateData(callback, instance, date, exchRate, reportE
         error = function(message)
             if (reportError == true) then
                 self.serviceSuccess = false
-                self.serviceMessage = "ENTSO-e Error: " ..message
-                self:debug(self.serviceMessage)
+                self.entsoeServiceMessage = "ENTSO-e Error: " ..message
+                QuickApp:error(self.entsoeServiceMessage)
                 self.httpClient = net.HTTPClient()
             end
             return nil
