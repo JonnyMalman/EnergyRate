@@ -10,7 +10,6 @@
 - Added new QA variable "TariffHistory" for how many days to store history in FIBARO tariff rates.
 - Localized panel text for language: EN, DK, NO, SV.
 
-<br></br>
 <i><b>Breaking changes that you need to update in your scenes and delete the old variables if you using first release v1.0:</b></i>
 - Global variable name change: "<b>EnergyRateArea</b>" to "<b>EnergyArea</b>".
 - Global variable name change: "<b>EnergyRateMedium</b>" to "<b>EnergyMediumPrice</b>".
@@ -43,3 +42,14 @@
 ## [v1.6] - Fix QA Child value display 2023-07
 - Corrected QA Child to show negative values.
 - Add Check for new QA update button. (Beta)
+
+## [v1.7] - 2023-10
+- Update to get local currency from changed API at Exchangerate.Host.
+This release only requires a "API Access Key" from https://exchangerate.host if you use other currency than Euro €.
+<i>(NOTE! Add historical tariff rates with [AddTariffDate] variable that was introduced in v1.5 now only works with current exchange! This is because of the new restrictions at Exchangerate.Host on a free account)</i>
+- The new function to "Check for new QA version" that was introduced in v1.6 is removed. FIBARO OS is not stable enough to request a website, the QA crash to often for a usefull feature.
+- Fix icon images to show correct direction on negative values.
+
+## [v1.7.2] - 2023-10
+- Minor display panel fix.
+- Variable correction on Low, Medium, High and very High price.
