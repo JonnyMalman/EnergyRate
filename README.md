@@ -12,7 +12,7 @@ The <b>ENTSO-e Energy Rate</b> QuickApp give you the current and coming energy s
 This QA has spot prices for the following countries: <b>Austria, Belgium, Bosnia and Herz., Bulgaria, Croatia, Czech Republic, Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Ireland, Italy, Latvia, Lithuania, Luxembourg, Netherlands, North Macedonia, Norway, Poland, Portugal, Romania, Serbia, Slovakia, Slovenia, Spain, Sweden, Switzerland, Ukraine </b>and<b> United Kingdom.</b>
 
 <img style= width:30%; src="img/README_img/readme1.png"/>
-<img src="img/README_img/readme2.png"/>
+<img style= width:30%; src="img/README_img/readme2.png"/>
 
 <b><h1>How to install</h1></b>
 After you have download, you need to unzip the file to get the <b>.fqa</b> file that can be install in FIBARO, I also provide the icon in <b>.png</b> format.
@@ -67,14 +67,14 @@ Usage in Lua scen:
 
 Or in Block scen:
 
-<img src="img/README_img/readme5.png"/>
+<img style= width:30%; src="img/README_img/readme5.png"/>
 
 <b><h1>FIBARO Tariff rates</h1></b>
 
 You can turn ON/Off storage of <b>ENTSO-e Energy Rates</b> in the FIBARO Energy Tariff table with the general variable <b>[EnergyTariffInFibaro]</b>, and you set how many days to store history in FIBARO tariff table in the QA variable <b>[TariffHistory]</b>.
 <i>In FIBARO Tariff settings you also set your local currency to use in this QA.</i>
 
-<img src="img/README_img/readme6.png"/>
+<img style= width:50%; src="img/README_img/readme6.png"/>
 
 <b><h1>Lua code samples</h1></b>
 
