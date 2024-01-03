@@ -1,7 +1,7 @@
 # Energy Spot Price
 
 The <b>ENTSO-e Energy Rate</b> QuickApp give you the current and coming energy spot price rates by hour from <a href="https://transparency.entsoe.eu/">ENTSO-e transparency platform</a> in your local currency. ENTSO-e is independent from any power company and no subscription or specific hardware is required to get this to work.
-<i><h5>(*Local currency now reqires a free account at https://exchangerate.host)</h5></i>
+<i><p>(*Local currency now reqires a free account at https://exchangerate.host)</p></i>
 
 <br>
 
@@ -30,7 +30,7 @@ After you have add this QA in FIBARO devices, you need to set your local energy 
 
 The variation of energy hour level in <b>[EnergyHourLevel]</b> is calculated from price values you set in the QA local variables <b>[PriceLow], [PriceMedium], [PriceHigh], [PriceVeryHigh]</b>. You set those prices from what you feel is the correct level prices for you in your local currency* by consumed kWh.
 
-<h4>(*If you use other than € Euro as your local currency, you need to get your own free "API access key". See "Exchange rate in local currency" below for more information.)</h4>
+<p>(*If you use other than € Euro as your local currency, you need to get your own free "API access key". See "Exchange rate in local currency" below for more information.)</p>
 
 <br>
 
@@ -42,7 +42,7 @@ Global variables to use in scenes:
 <b>[EnergyMonthLevel]</b> show what the avrage price is in current month. </br>
 
 To calculate different energy prices including tax, costs, grid, fee, etc, you change these values in the local QA variables.
-<h4>(EnergyRate * ExchangeRate + OperatorCost * Losses * Adjustment + DealerCost + GridCost * Tax)</h4>
+<p>(EnergyRate * ExchangeRate + OperatorCost * Losses * Adjustment + DealerCost + GridCost * Tax)</p>
 
 <img style= width:70%; src="img/README_img/readme4.png"/>
 
